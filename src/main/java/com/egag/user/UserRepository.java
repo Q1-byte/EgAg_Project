@@ -1,13 +1,7 @@
 package com.egag.user;
 
-import com.egag.user.User;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Optional;
-
-public interface UserRepository extends JpaRepository<User, Long> {
-
-    Optional<User> findByEmail(String email);
-
-    boolean existsByEmail(String email);
+// com.egag.common.domain.UserRepository 를 사용하세요.
+// 이 파일은 하위호환을 위한 타입 참조용으로만 유지합니다.
+// Spring Bean 충돌 방지를 위해 JpaRepository를 상속하지 않습니다.
+public interface UserRepository {
 }
