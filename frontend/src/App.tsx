@@ -4,6 +4,7 @@ import Decalcomania from './pages/Decalcomania'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import Inquiry from './pages/Inquiry'
 
 function App() {
   return (
@@ -24,7 +25,7 @@ function App() {
       <Route path="/pricing" element={<div>Pricing</div>} />
       <Route path="/billing" element={<div>Billing</div>} />
       <Route path="/profile" element={<div>Profile</div>} />
-      <Route path="/contact" element={<div>Contact</div>} />
+        <Route path="/contact" element={<Inquiry />} />
       <Route path="/password-reset" element={<div>Password Reset</div>} />
       <Route path="/payment/success" element={<div>Payment Success</div>} />
       <Route path="/payment/fail" element={<div>Payment Fail</div>} />

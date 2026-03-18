@@ -54,6 +54,9 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+
+    // 문의가 접수 되었을 때 사용자에게 "접수 완료" 알림과 점수 내용을 담은 메일을 자동으로 보내는 기능
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 }
 
 tasks.named('test') {

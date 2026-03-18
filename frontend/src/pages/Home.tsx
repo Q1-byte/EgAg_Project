@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import {Link, useNavigate} from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 
 export default function Home() {
@@ -76,7 +76,18 @@ export default function Home() {
         </div>
       </main>
 
-      <footer style={s.footer}>© 2025 Decalco · AI 데칼코마니 그림판</footer>
+      <footer style={s.footer}>
+        <div style={s.footerContent}>
+          <div>© 2026 Decalco · AI 데칼코마니 그림판</div>
+          <div style={s.footerLinks}>
+            <Link to="/contact" style={s.footerLink}>1:1 문의하기</Link>
+            <span style={s.divider}></span>
+            <span style={s.footerItem}>이용약관</span>
+            <span style={s.divider}></span>
+            <span style={{ ...s.footerItem, fontWeight: 700 }}>개인정보처리방침</span>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
@@ -159,7 +170,36 @@ const s: Record<string, React.CSSProperties> = {
     width: '100%',
   },
   footer: {
-    textAlign: 'center', padding: '24px', fontSize: 13, color: '#94A3B8',
+    textAlign: 'center',
+    padding: '32px 24px',
+    fontSize: '13px',
+    color: '#94A3B8',
     borderTop: '1px solid #E2E8F0',
+    background: 'rgba(255, 255, 255, 0.4)',
+  },
+  footerContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  footerLinks: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center', // 'align-items'를 'alignItems'로 수정
+    gap: '12px',
+  },
+  footerLink: {
+    color: '#64748B',
+    textDecoration: 'none',
+    fontWeight: 600,
+  },
+  footerItem: {
+    cursor: 'pointer',
+    color: '#94A3B8',
+  },
+  divider: {
+    width: '1px',
+    height: '10px',
+    backgroundColor: '#E2E8F0',
   },
 }
