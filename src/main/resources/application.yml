@@ -38,15 +38,9 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}
 
-# LangChain4j + OpenAI
-langchain4j:
-  open-ai:
-    chat-model:
-      api-key: ${OPENAI_API_KEY:placeholder}
-      model-name: gpt-4o
-      max-tokens: 1000
-      log-requests: true
-      log-responses: true
+# OpenAI
+openai:
+  api-key: ${OPENAI_API_KEY:}
 
 server:
   port: 8080
