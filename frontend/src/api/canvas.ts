@@ -1,21 +1,18 @@
 import client from './client'
 
-export interface StartSessionResult {
-  id: string
-  topic: string
-  message: string
-}
+export const identifyCanvas = (canvasBase64: string) =>
+  client.post<{ subject: string; reason: string }>('/canvas/identify', { canvasBase64 })
 
-export interface CompleteResult {
-  guess: string
-}
+export const transformCanvas = (canvasBase64: string, style: string, subject?: string, reason?: string) =>
+  client.post<{ imageUrl: string; prompt: string; style: string; story: string }>('/canvas/transform', {
+    canvasBase64,
+    style,
+    subject,
+    reason,
+  })
 
-export async function startSession(nickname: string): Promise<StartSessionResult> {
-  const res = await client.post('/canvas/start', { nickname })
-  return res.data
-}
+export const startSession = (nickname: string): Promise<{ id: string; topic: string }> =>
+  client.post<{ id: string; topic: string }>('/canvas/start', { nickname }).then(res => res.data)
 
-export async function completeCanvas(sessionId: string, canvasBase64: string): Promise<CompleteResult> {
-  const res = await client.post(`/canvas/${sessionId}/complete`, { canvasBase64 })
-  return res.data
-}
+export const completeCanvas = (sessionId: string, canvasBase64: string): Promise<{ guess: string }> =>
+  client.post<{ guess: string }>(`/canvas/${sessionId}/complete`, { canvasBase64 }).then(res => res.data)
