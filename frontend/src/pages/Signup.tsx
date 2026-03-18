@@ -102,7 +102,7 @@ export default function Signup() {
         email: form.email, phone: form.phone, password: form.password,
       })
       setAuth(res.userId, res.nickname, res.tokenBalance, res.accessToken)
-      navigate('/decalcomania?skip=true')
+      navigate('/')
     } catch (err: any) {
       const code = err.response?.data?.error?.code ?? ''
       if (code === 'EMAIL_DUPLICATED') {
@@ -319,18 +319,31 @@ export default function Signup() {
             {errors.agreeTerms && <span style={s.fieldError}>{errors.agreeTerms}</span>}
           </div>
 
-          <button
-            style={{ ...s.btnPrimary, opacity: loading ? 0.7 : 1 }}
-            type="submit" disabled={loading}
-          >
-            {loading ? '가입 중...' : '회원가입'}
-          </button>
+          <div style={s.btnRow}>
+            <button
+              style={s.btnSecondary}
+              type="button"
+              onClick={() => navigate('/')}
+            >
+              ← 메인으로
+            </button>
+            <button
+              style={{ ...s.btnPrimary, opacity: loading ? 0.7 : 1 }}
+              type="submit" disabled={loading}
+            >
+              {loading ? '가입 중...' : '회원가입'}
+            </button>
+          </div>
         </form>
 
         <p style={s.loginText}>
           이미 계정이 있으신가요?{' '}
           <Link to="/login" style={s.loginLink}>로그인</Link>
         </p>
+
+        <button style={s.btnHome} onClick={() => navigate('/')}>
+          메인으로 돌아가기
+        </button>
       </div>
     </div>
   )
@@ -401,13 +414,27 @@ const s: Record<string, React.CSSProperties> = {
   termsDesc: { fontSize: 13, color: '#475569', margin: 0, lineHeight: 1.6 },
   termsSectionTitle: { fontSize: 13, fontWeight: 700, color: '#1D4ED8', margin: '6px 0 2px' },
   termsItem: { fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.6, paddingLeft: 8 },
+  btnRow: {
+    display: 'flex', gap: 10, marginTop: 4,
+  },
+  btnSecondary: {
+    flex: '0 0 auto', padding: '13px 20px', fontSize: 15, fontWeight: 600,
+    background: 'linear-gradient(135deg, #BAE6FD, #E0F2FE)', color: '#0369A1',
+    border: '1px solid #7DD3FC', borderRadius: 10, cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
   btnPrimary: {
-    width: '100%', padding: '13px', fontSize: 16, fontWeight: 700,
+    flex: 1, padding: '13px', fontSize: 16, fontWeight: 700,
     background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-    color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', marginTop: 4,
+    color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer',
   },
   loginText: { fontSize: 14, color: '#64748B', marginTop: 20 },
   loginLink: { color: '#3B82F6', fontWeight: 600, textDecoration: 'none' },
+  btnHome: {
+    marginTop: 12, padding: '10px 32px', fontSize: 14, fontWeight: 700,
+    background: 'linear-gradient(135deg, #38BDF8, #3B82F6)',
+    color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer',
+  },
   modalOverlay: {
     position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.4)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
