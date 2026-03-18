@@ -1,7 +1,7 @@
 package com.egag.common.config;
 
 import com.egag.auth.JwtAuthFilter;
-import com.egag.auth.service.AuthService; // 1. AuthService 임포트 추가
+import com.egag.auth.AuthService; // 1. AuthService 임포트 추가
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,12 +28,14 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // 5. UserDetailsService 등록 (본인 코드에서 가져옴)
                 .userDetailsService(authService)
                 .authorizeHttpRequests(auth -> auth
                         // 팀원 코드의 상세한 설정들 유지
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/kakao/**").permitAll()
                         .requestMatchers("/api/canvas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/artworks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
