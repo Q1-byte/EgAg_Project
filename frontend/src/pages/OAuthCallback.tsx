@@ -17,13 +17,14 @@ export default function OAuthCallback() {
     const refreshToken = searchParams.get('refreshToken')
     const userId = searchParams.get('userId')
     const nickname = searchParams.get('nickname')
+    const role = searchParams.get('role') || 'USER'
     const tokenBalance = searchParams.get('tokenBalance')
 
     const needsOnboarding = searchParams.get('needsOnboarding') === 'true'
 
     if (accessToken && userId && nickname && tokenBalance) {
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
-      setAuth(userId, nickname, parseInt(tokenBalance), accessToken)
+      setAuth(userId, nickname, role, parseInt(tokenBalance), accessToken)
       setNeedsOnboarding(needsOnboarding)
       if (needsOnboarding) {
         navigate('/kakao-onboarding', { replace: true })

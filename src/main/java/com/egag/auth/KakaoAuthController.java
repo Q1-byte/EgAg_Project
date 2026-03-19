@@ -51,6 +51,7 @@ public class KakaoAuthController {
                     + "&refreshToken=" + token.getRefreshToken()
                     + "&userId=" + token.getUserId()
                     + "&nickname=" + URLEncoder.encode(token.getNickname(), StandardCharsets.UTF_8)
+                    + "&role=" + token.getRole()
                     + "&tokenBalance=" + token.getTokenBalance()
                     + "&needsOnboarding=" + token.isNeedsOnboarding();
             return new RedirectView(redirectUrl);
