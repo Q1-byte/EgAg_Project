@@ -116,8 +116,9 @@ public class AuthService implements UserDetailsService {
         refreshTokenRepository.save(refreshToken);
 
         User u = refreshToken.getUser();
+        // ✅ 생성자 파라미터에 u.getRole() 추가
         return new TokenResponse(newAccessToken, refreshToken.getToken(),
-                u.getId(), u.getNickname(), u.getTokenBalance());
+                u.getId(), u.getNickname(), u.getRole(), u.getTokenBalance());
     }
 
     // ─────────────────────────────────────────
@@ -224,7 +225,8 @@ public class AuthService implements UserDetailsService {
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenExpiration));
         refreshTokenRepository.save(refreshToken);
 
+        // ✅ 생성자 파라미터에 user.getRole() 추가
         return new TokenResponse(accessToken, refreshToken.getToken(),
-                user.getId(), user.getNickname(), user.getTokenBalance());
+                user.getId(), user.getNickname(), user.getRole(), user.getTokenBalance());
     }
 }

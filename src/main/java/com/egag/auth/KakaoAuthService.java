@@ -175,7 +175,14 @@ public class KakaoAuthService {
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenExpiration));
         refreshTokenRepository.save(refreshToken);
 
-        return new TokenResponse(accessToken, refreshToken.getToken(),
-                user.getId(), user.getNickname(), user.getTokenBalance());
+        // ✅ 생성자 파라미터에 user.getRole()을 추가하여 6개로 맞춤
+        return new TokenResponse(
+                accessToken,
+                refreshToken.getToken(),
+                user.getId(),
+                user.getNickname(),
+                user.getRole(),    // 👈 이 줄이 추가되었습니다!
+                user.getTokenBalance()
+        );
     }
 }
