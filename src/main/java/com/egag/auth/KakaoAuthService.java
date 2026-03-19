@@ -175,19 +175,19 @@ public class KakaoAuthService {
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenExpiration));
         refreshTokenRepository.save(refreshToken);
 
-        // ✅ 생성자 파라미터에 user.getRole()을 추가하여 6개로 맞춤
+        // ✅ 온보딩 필요 여부 계산 (이름이나 전화번호가 없으면 true)
+        boolean needsOnboarding = (user.getName() == null || user.getName().isBlank())
+                || (user.getPhone() == null || user.getPhone().isBlank());
+
+        // ✅ 수정된 TokenResponse 생성자 호출 (순서 중요: accessToken, refreshToken, id, nickname, role, balance, onboarding)
         return new TokenResponse(
                 accessToken,
                 refreshToken.getToken(),
                 user.getId(),
                 user.getNickname(),
-                user.getRole(),    // 👈 이 줄이 추가되었습니다!
-                user.getTokenBalance()
+                user.getRole() != null ? user.getRole() : "USER", // role이 null일 경우 대비
+                user.getTokenBalance(),
+                needsOnboarding
         );
-        boolean needsOnboarding = (user.getName() == null || user.getName().isBlank())
-                || (user.getPhone() == null || user.getPhone().isBlank());
-
-        return new TokenResponse(accessToken, refreshToken.getToken(),
-                user.getId(), user.getNickname(), user.getTokenBalance(), needsOnboarding);
     }
 }

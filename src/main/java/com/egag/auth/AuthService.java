@@ -118,7 +118,7 @@ public class AuthService implements UserDetailsService {
         User u = refreshToken.getUser();
         // ✅ 생성자 파라미터에 u.getRole() 추가
         return new TokenResponse(newAccessToken, refreshToken.getToken(),
-                u.getId(), u.getNickname(), u.getRole(), u.getTokenBalance());
+                u.getId(), u.getNickname(), u.getRole(), u.getTokenBalance(), false);
     }
 
     // ─────────────────────────────────────────
@@ -227,6 +227,6 @@ public class AuthService implements UserDetailsService {
 
         // ✅ 생성자 파라미터에 user.getRole() 추가
         return new TokenResponse(accessToken, refreshToken.getToken(),
-                user.getId(), user.getNickname(), user.getRole(), user.getTokenBalance());
+                user.getId(), user.getNickname(), user.getRole(), user.getTokenBalance(), false);
     }
 }
