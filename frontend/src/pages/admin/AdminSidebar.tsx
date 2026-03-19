@@ -2,24 +2,15 @@ import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const AdminSidebar = () => {
-    const location = useLocation(); // ⭐ 추가: 현재 경로 확인용
-    const { isAuthenticated, role, accessToken, logout } = useAuthStore(); // ⭐ 추가: logout 가져오기
+    const location = useLocation();
+    const { isAuthenticated, role, logout } = useAuthStore();
 
-    // 관리자 조건 체크 (DB 값이 100 또는 'ADMIN')
     const isAdmin = role === 'ADMIN' || String(role) === '100';
 
-    console.log("--- 어드민 체크 ---");
-    console.log("인증여부:", isAuthenticated);
-    console.log("내 역할:", role);
-    console.log("토큰 존재여부:", !!accessToken);
-
-    // 1. 권한이 없으면 홈으로 보냄
     if (!isAuthenticated || !isAdmin) {
-        console.error("❌ 권한이 없거나 로그인되지 않았습니다.");
         return <Navigate to="/" replace />;
     }
 
-    // 2. 메뉴 아이템 설정
     const menuItems = [
         { path: '/admin/dashboard', name: '📊 대시보드', icon: '📈' },
         { path: '/admin/users', name: '👥 유저 관리', icon: '👤' },
@@ -27,10 +18,8 @@ const AdminSidebar = () => {
         { path: '/admin/all-users', name: '📋 전체 목록', icon: '🗂️' },
     ];
 
-    // 3. 실제 화면 렌더링
     return (
         <div style={s.layout}>
-            {/* ⬅️ 사이드바 영역 */}
             <aside style={s.sidebar}>
                 <div style={s.logoSection}>
                     <h2 style={s.logo}>이그에그 🐣</h2>
@@ -58,12 +47,17 @@ const AdminSidebar = () => {
                     })}
                 </nav>
 
+                {/* 🛠️ 하단 버튼 영역 수정 */}
                 <div style={s.footer}>
-                    <button onClick={logout} style={s.logoutBtn}>🚪 로그아웃</button>
+                    <Link to="/" style={s.homeBtn}>
+                        🏠 사용자 홈으로
+                    </Link>
+                    <button onClick={logout} style={s.logoutBtn}>
+                        🚪 로그아웃
+                    </button>
                 </div>
             </aside>
 
-            {/* ➡️ 콘텐츠 영역 (실제 페이지 내용이 나오는 곳) */}
             <main style={s.mainContent}>
                 <Outlet />
             </main>
@@ -71,7 +65,6 @@ const AdminSidebar = () => {
     );
 };
 
-// 🎨 사이드바 전용 스타일
 const s: Record<string, React.CSSProperties> = {
     layout: { display: 'flex', minHeight: '100vh', backgroundColor: '#F9FAFB' },
     sidebar: {
@@ -97,7 +90,28 @@ const s: Record<string, React.CSSProperties> = {
         fontSize: '15px',
         transition: 'all 0.2s'
     },
-    footer: { padding: '30px', borderTop: '1px solid #F3F4F6' },
+    // ⭐ Footer 스타일 수정: 버튼 간격 조정
+    footer: {
+        padding: '20px',
+        borderTop: '1px solid #F3F4F6',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+    },
+    // ⭐ 홈으로 가기 버튼 스타일 추가
+    homeBtn: {
+        display: 'block',
+        textAlign: 'center',
+        padding: '12px',
+        borderRadius: '12px',
+        backgroundColor: '#F3F4F6',
+        color: '#4B5563',
+        textDecoration: 'none',
+        fontSize: '14px',
+        fontWeight: 700,
+        transition: '0.2s',
+        border: '1px solid #E5E7EB'
+    },
     logoutBtn: {
         width: '100%',
         padding: '12px',

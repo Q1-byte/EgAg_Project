@@ -25,7 +25,13 @@ const AdminDashboard = () => {
     const fetchStats = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await axios.get('/api/admin/dashboard/stats');
+            const token = useAuthStore.getState().accessToken; // 👈 스토어에서 직접 토큰 가져오기
+
+            const res = await axios.get('/api/admin/dashboard/stats', {
+                headers: {
+                    Authorization: `Bearer ${token}` // 👈 헤더에 토큰 실어주기
+                }
+            });
             setStats(res.data);
         } catch (err) {
             console.error("통계 데이터 로딩 실패:", err);

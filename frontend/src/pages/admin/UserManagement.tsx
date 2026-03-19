@@ -17,35 +17,44 @@ interface UserListItem {
 const UserManagement = () => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const role = useAuthStore((state) => state.role);
+    const accessToken = useAuthStore((state) => state.accessToken); // ✅ 토큰 가져오기 추가
 
     const [users, setUsers] = useState<UserListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'ALL' | 'ADMIN' | 'SUSPENDED'>('ALL');
 
-    // 1️⃣ 전체 유저 목록 가져오기
+    // 1️⃣ 전체 유저 목록 가져오기 (인증 헤더 추가)
     const fetchUsers = useCallback(async () => {
+        if (!accessToken) return; // ✅ 토큰 없으면 실행 안 함
+
         try {
             setLoading(true);
-            const res = await axios.get('/api/admin/users/all');
+            // ✅ 요청 헤더에 Authorization 추가
+            const res = await axios.get('/api/admin/users/all', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            });
             setUsers(res.data);
         } catch (err) {
             console.error("유저 목록 로딩 실패:", err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [accessToken]); // ✅ 의존성에 accessToken 추가
 
     useEffect(() => {
-        if (isAuthenticated && role === 'ADMIN') {
+        // ✅ 토큰까지 있을 때만 데이터 로딩 시작
+        if (isAuthenticated && role === 'ADMIN' && accessToken) {
             fetchUsers();
         }
-    }, [isAuthenticated, role, fetchUsers]);
+    }, [isAuthenticated, role, accessToken, fetchUsers]);
 
     if (!isAuthenticated || role !== 'ADMIN') {
         return <Navigate to="/" replace />;
     }
 
-    // 2️⃣ 필터링된 유저 목록
+    // 2️⃣ 필터링된 유저 목록 (기존과 동일)
     const filteredUsers = users.filter(user => {
         if (filter === 'ADMIN') return user.role === 'ADMIN';
         if (filter === 'SUSPENDED') return user.isSuspended;

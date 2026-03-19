@@ -21,9 +21,9 @@ interface TokenLog {
 }
 
 const AdminUserManagement = () => {
-    // 1️⃣ Hooks 선언 (최상단)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const role = useAuthStore((state) => state.role);
+    const accessToken = useAuthStore((state) => state.accessToken); // ✅ 토큰 추가
 
     const [searchKeyword, setSearchKeyword] = useState('');
     const [user, setUser] = useState<UserInfo | null>(null);
@@ -31,43 +31,47 @@ const AdminUserManagement = () => {
     const [reason, setReason] = useState('결제 오류 보상');
     const [logs, setLogs] = useState<TokenLog[]>([]);
 
-    // 2️⃣ API 호출 함수 (useCallback으로 메모이제이션)
+    // 🔑 공통 헤더 설정 함수
+    const getAuthHeader = useCallback(() => ({
+        headers: { Authorization: `Bearer ${accessToken}` }
+    }), [accessToken]);
+
+    // 2️⃣ API 호출 함수 (헤더 추가)
     const fetchLogs = useCallback(async () => {
-        // 관리자가 아닐 때는 API를 호출하지 않도록 방어 코드 추가
-        if (role !== 'ADMIN') return;
+        if (role !== 'ADMIN' || !accessToken) return;
 
         try {
-            const res = await axios.get('/api/admin/tokens/logs');
+            // ✅ 요청 시 인증 헤더 포함
+            const res = await axios.get('/api/admin/tokens/logs', getAuthHeader());
             setLogs(res.data);
         } catch (err) {
             console.error("로그 로딩 실패:", err);
         }
-    }, [role]); // role이 바뀔 때만 함수 재생성
+    }, [role, accessToken, getAuthHeader]);
 
-    // 3️⃣ useEffect (순서 주의: return문보다 위에 위치)
     useEffect(() => {
-        let isMounted = true; // 메모리 누수 방지용 플래그
-
-        if (isAuthenticated && role === 'ADMIN') {
-            // 즉시 실행 함수(IIFE)나 비동기 호출로 렌더링 사이클과 분리
+        let isMounted = true;
+        if (isAuthenticated && role === 'ADMIN' && accessToken) {
             const loadInitialData = async () => {
                 if (isMounted) await fetchLogs();
             };
             loadInitialData();
         }
-
         return () => { isMounted = false; };
-    }, [isAuthenticated, role, fetchLogs]);
+    }, [isAuthenticated, role, accessToken, fetchLogs]);
 
-    // 🛡️ 4️⃣ 권한 체크 가드 (모든 Hook 선언 이후에 배치)
     if (!isAuthenticated || role !== 'ADMIN') {
         return <Navigate to="/" replace />;
     }
 
+    // 🔍 유저 검색 (헤더 추가)
     const handleSearch = async () => {
         if (!searchKeyword.trim()) return;
         try {
-            const res = await axios.get(`/api/admin/users`, { params: { nickname: searchKeyword } });
+            const res = await axios.get(`/api/admin/users`, {
+                params: { nickname: searchKeyword },
+                ...getAuthHeader() // ✅ 인증 헤더 추가
+            });
             setUser(res.data);
         } catch (err) {
             console.error("유저 검색 중 오류 발생:", err);
@@ -76,6 +80,7 @@ const AdminUserManagement = () => {
         }
     };
 
+    // 💰 토큰 지급 (헤더 추가)
     const handleGiveToken = async () => {
         if (!user) return;
         if (!confirm(`${user.nickname}님에게 ${tokenAmount} 토큰을 지급하시겠습니까?`)) return;
@@ -85,22 +90,24 @@ const AdminUserManagement = () => {
                 userId: user.id,
                 amount: tokenAmount,
                 reason: reason
-            });
+            }, getAuthHeader()); // ✅ 인증 헤더 추가
+
             alert("토큰이 성공적으로 지급되었습니다!");
             setUser({ ...user, tokenBalance: user.tokenBalance + tokenAmount });
-            fetchLogs(); // 지급 후 로그 새로고침
+            fetchLogs();
         } catch (err) {
             console.error("토큰 지급 중 오류 발생:", err);
             alert("토큰 지급에 실패했습니다.");
         }
     };
 
+    // 🚫 계정 정지 토글 (헤더 추가)
     const handleToggleSuspension = async () => {
         if (!user) return;
         const action = user.isSuspended ? "해제" : "정지";
         if (!confirm(`정말로 ${user.nickname}님의 계정을 ${action}하시겠습니까?`)) return;
         try {
-            await axios.patch(`/api/admin/users/${user.id}/suspension`);
+            await axios.patch(`/api/admin/users/${user.id}/suspension`, {}, getAuthHeader()); // ✅ 인증 헤더 추가
             alert(`성공적으로 ${action}되었습니다.`);
             setUser({ ...user, isSuspended: !user.isSuspended });
         } catch (err) {
