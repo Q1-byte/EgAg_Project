@@ -9,7 +9,7 @@ type Tab = 'profile' | 'gallery'
 
 export default function MyPage() {
   const navigate = useNavigate()
-  const { isAuthenticated, nickname, tokenBalance, logout } = useAuthStore()
+  const { isAuthenticated, nickname, tokenBalance, logout, setProfileImageUrl } = useAuthStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [tab, setTab] = useState<Tab>('profile')
@@ -47,6 +47,7 @@ export default function MyPage() {
         setEditNickname(p.nickname || '')
         setEditPhone(p.phone || '')
         setEditEmail(p.subEmail || '')
+        if (p.profileImageUrl) setProfileImageUrl(p.profileImageUrl)
       })
       .catch(() => setProfileError(true))
       .finally(() => setLoadingProfile(false))
@@ -66,6 +67,7 @@ export default function MyPage() {
     try {
       const updated = await uploadProfilePhoto(file)
       setProfile(updated)
+      if (updated.profileImageUrl) setProfileImageUrl(updated.profileImageUrl)
     } catch {
       // 실패 시 조용히 처리
     } finally {
@@ -146,7 +148,7 @@ export default function MyPage() {
                   {photoLoading ? (
                     <div style={s.avatarPlaceholder}><span style={{ fontSize: 24 }}>⏳</span></div>
                   ) : profile.profileImageUrl ? (
-                    <img src={profile.profileImageUrl} alt="프로필" style={s.avatar} />
+                    <img src={profile.profileImageUrl.startsWith('/uploads') ? `http://localhost:8080${profile.profileImageUrl}` : profile.profileImageUrl} alt="프로필" style={s.avatar} />
                   ) : (
                     <div style={s.avatarPlaceholder}><span style={{ fontSize: 40 }}>👤</span></div>
                   )}

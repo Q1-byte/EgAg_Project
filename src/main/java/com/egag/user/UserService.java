@@ -1,18 +1,21 @@
 package com.egag.user;
 
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
 import com.egag.common.domain.ArtworkRepository;
 import com.egag.common.domain.User;
 import com.egag.common.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,7 +26,9 @@ public class UserService {
     private final ArtworkRepository artworkRepository;
     private final FollowRepository followRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Cloudinary cloudinary;
+
+    @Value("${app.upload-dir:uploads/profiles}")
+    private String uploadDir;
 
     public UserProfileResponse getMe(String email) {
         User user = userRepository.findByEmail(email)
@@ -114,11 +119,20 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         try {
-            Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(),
-                    ObjectUtils.asMap("folder", "egag/profiles", "resource_type", "image"));
-            user.setProfileImageUrl((String) result.get("secure_url"));
+            Path dir = Paths.get(uploadDir);
+            Files.createDirectories(dir);
+
+            String ext = "";
+            String original = file.getOriginalFilename();
+            if (original != null && original.contains(".")) {
+                ext = original.substring(original.lastIndexOf("."));
+            }
+            String filename = UUID.randomUUID() + ext;
+            Files.write(dir.resolve(filename), file.getBytes());
+
+            user.setProfileImageUrl("/uploads/profiles/" + filename);
             return new UserProfileResponse(userRepository.save(user));
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException("사진 업로드에 실패했습니다.");
         }
     }

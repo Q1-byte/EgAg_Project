@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export default function Header({ hideOnScroll = false }: HeaderProps) {
   const navigate = useNavigate()
-  const { isAuthenticated, nickname, tokenBalance, logout } = useAuthStore()
+  const { isAuthenticated, nickname, tokenBalance, logout, profileImageUrl } = useAuthStore()
   const [visible, setVisible] = useState(true)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
@@ -84,18 +84,27 @@ export default function Header({ hideOnScroll = false }: HeaderProps) {
                   onClick={() => setShowProfileMenu(v => !v)}
                   style={{
                     width: 36, height: 36, borderRadius: '50%', cursor: 'pointer',
-                    background: 'linear-gradient(135deg, #6B82A0, #c47a8a)',
+                    background: profileImageUrl ? 'none' : 'linear-gradient(135deg, #6B82A0, #c47a8a)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 14, fontWeight: 800, color: 'white',
                     border: '2px solid rgba(255,255,255,0.8)',
                     boxShadow: '0 2px 12px rgba(107,130,160,0.35)',
                     userSelect: 'none', flexShrink: 0,
+                    overflow: 'hidden',
                     transition: 'filter 0.15s, transform 0.15s',
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.filter = 'brightness(1.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.06)' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.filter = ''; (e.currentTarget as HTMLDivElement).style.transform = '' }}
                 >
-                  {nickname.charAt(0).toUpperCase()}
+                  {profileImageUrl ? (
+                    <img
+                      src={profileImageUrl.startsWith('/uploads') ? `http://localhost:8080${profileImageUrl}` : profileImageUrl}
+                      alt={nickname || ''}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    nickname?.charAt(0).toUpperCase()
+                  )}
                 </div>
 
                 {/* 드롭다운 */}
