@@ -32,6 +32,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 12)
     private String nickname; // 본인의 username 대신 기존의 nickname을 사용하거나 둘 다 유지
 
+    @Column(name = "sub_email")
+    private String subEmail;
+
     @Column(name = "profile_image_url", columnDefinition = "TEXT")
     private String profileImageUrl;
 
@@ -75,5 +78,13 @@ public class User {
     // 필요하다면 Role enum을 내부에 선언만 해두고 꺼내 쓸 수 있습니다.
     public enum Role {
         USER, ADMIN
+    }
+
+    // User.java 파일 내부 적당한 위치에 추가
+    public void addToken(Integer amount) {
+        if (this.tokenBalance == null) {
+            this.tokenBalance = 0;
+        }
+        this.tokenBalance += amount;
     }
 }
