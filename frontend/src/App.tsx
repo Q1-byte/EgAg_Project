@@ -9,6 +9,8 @@ import PasswordReset from './pages/PasswordReset'
 import PasswordResetConfirm from './pages/PasswordResetConfirm'
 import OAuthCallback from './pages/OAuthCallback'
 import Policy from './pages/Policy'
+import TokenShop from './pages/TokenShop'
+import MyPage from './pages/MyPage'
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUserManagement from './pages/admin/AdminUserManagement';
@@ -54,6 +56,9 @@ function App() {
             <Route path="all-users" element={<UserManagement />} />
             <Route path="payments" element={<PaymentManagement />} />
         </Route>
+      <Route path="/token-shop" element={<TokenShop />} />
+      <Route path="/mypage" element={<MyPage />} />
+      <Route path="/admin" element={<div>Admin</div>} />
       <Route path="*" element={<div>404 Not Found</div>} />
     </Routes>
   )
