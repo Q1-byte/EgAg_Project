@@ -22,7 +22,11 @@ const AdminSidebar = () => {
         <div style={s.layout}>
             <aside style={s.sidebar}>
                 <div style={s.logoSection}>
-                    <h2 style={s.logo}>이그에그 🐣</h2>
+                    <img
+                        src="/Egag_logo-removebg.png"
+                        alt="이그에그 로고"
+                        style={s.logoImg}
+                    />
                     <p style={s.subLogo}>ADMIN PANEL</p>
                 </div>
 
