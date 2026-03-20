@@ -1,7 +1,9 @@
+import axios from 'axios';
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { signup } from '../api/auth'
 import { useAuthStore } from '../stores/useAuthStore'
+import { AlertTriangle } from 'lucide-react'
 
 interface Form {
   name: string
@@ -101,21 +103,29 @@ export default function Signup() {
         name: form.name, nickname: form.nickname,
         email: form.email, phone: form.phone, password: form.password,
       })
-      setAuth(res.userId, res.nickname, res.tokenBalance, res.accessToken)
+      if (res.refreshToken) localStorage.setItem('refreshToken', res.refreshToken)
+      setAuth(res.userId, res.nickname, res.role, res.tokenBalance, res.accessToken);
       navigate('/')
-    } catch (err: any) {
-      const code = err.response?.data?.error?.code ?? ''
-      if (code === 'EMAIL_DUPLICATED') {
-        setErrors({ email: '이미 사용 중인 이메일입니다.' })
-      } else if (code === 'NICKNAME_DUPLICATED') {
-        setErrors({ nickname: '이미 사용 중인 별명입니다.' })
+    } catch (err: unknown) {
+      // ✅ Axios 에러인지 확인하여 any 제거
+      if (axios.isAxiosError(err)) {
+        const code = err.response?.data?.error?.code ?? '';
+
+        if (code === 'EMAIL_DUPLICATED') {
+          setErrors({ email: '이미 사용 중인 이메일입니다.' });
+        } else if (code === 'NICKNAME_DUPLICATED') {
+          setErrors({ nickname: '이미 사용 중인 별명입니다.' });
+        } else {
+          setErrors({ general: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+        }
       } else {
-        setErrors({ general: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' })
+        // Axios 에러가 아닌 일반 에러 처리
+        setErrors({ general: '네트워크 연결을 확인해주세요.' });
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div style={s.bg}>
@@ -123,7 +133,7 @@ export default function Signup() {
       {alertMessages.length > 0 && (
         <div style={s.modalOverlay} onClick={() => setAlertMessages([])}>
           <div style={s.modalBox} onClick={e => e.stopPropagation()}>
-            <div style={s.modalTitle}>⚠️ 입력하지 않은 항목이 있어요</div>
+            <div style={s.modalTitle}><AlertTriangle size={18} style={{ marginRight: 6, verticalAlign: 'middle', color: '#F59E0B' }} />입력하지 않은 항목이 있어요</div>
             <ul style={s.modalList}>
               {alertMessages.map((msg, i) => (
                 <li key={i} style={s.modalItem}>· {msg}</li>
@@ -137,8 +147,7 @@ export default function Signup() {
       <div style={s.card}>
         {/* 로고 */}
         <div style={s.logo} onClick={() => navigate('/')}>
-          <span style={s.logoIcon}>🪞</span>
-          <span style={s.logoText}>Decal<b>co</b></span>
+          <img src="/Egag_logo-removebg.png" alt="EgAg" style={{ height: 48 }} />
         </div>
 
         <h1 style={s.title}>회원가입</h1>

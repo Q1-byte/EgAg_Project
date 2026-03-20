@@ -5,6 +5,7 @@ import com.egag.auth.AuthService; // 1. AuthService 임포트 추가
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager; // 2. 추가
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration; // 3. 추가
@@ -36,6 +37,7 @@ public class SecurityConfig {
                         // 1. 기존 팀원 코드 유지
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/auth/kakao/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/canvas/transform").authenticated()
                         .requestMatchers("/api/canvas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/artworks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
@@ -48,9 +50,16 @@ public class SecurityConfig {
 
                         // 3. 나머지 설정 유지
                         .requestMatchers("/api/payments/webhook").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/packages").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/kakaopay/approve").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

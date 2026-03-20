@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { login } from '../api/auth'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -27,40 +27,64 @@ export default function Login() {
     return e
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const errs = validate()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
 
-    setLoading(true)
-    setErrors({})
+    setLoading(true);
+    setErrors({});
+
     try {
+      // 1. 변수 선언은 한 번만! 'unknown'을 거쳐 'Record<string, unknown>'으로 안전하게 변환
       const res = await login(email, password)
-      setAuth(res.userId, res.nickname, res.tokenBalance, res.accessToken)
-      navigate('/')
-    } catch (err: any) {
-      const code = err.response?.data?.error?.code
-      if (err.response?.status === 401 || code === 'INVALID_CREDENTIALS') {
-        setErrors({ general: '이메일 또는 비밀번호가 올바르지 않습니다.' })
-      } else if (code === 'USER_SUSPENDED') {
-        setErrors({ general: '정지된 계정입니다. 고객센터에 문의해주세요.' })
-      } else if (err.response?.status === 429) {
-        setErrors({ general: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' })
+
+      if (res.refreshToken) localStorage.setItem('refreshToken', res.refreshToken)
+      setAuth(res.userId, res.nickname, res.role, res.tokenBalance, res.accessToken)
+
+      if (res.role === 'ADMIN') {
+        navigate('/admin/dashboard');
       } else {
-        setErrors({ general: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' })
+        navigate('/');
+      }
+
+    } catch (err: unknown) {
+      console.error("로그인 에러 상세:", err);
+
+      interface ApiError {
+        response?: {
+          data?: { error?: { code?: string } };
+          status?: number;
+        };
+      }
+
+      const error = err as ApiError;
+      const code = error.response?.data?.error?.code;
+      const status = error.response?.status;
+
+      if (status === 401 || code === 'INVALID_CREDENTIALS') {
+        setErrors({ general: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+      } else if (code === 'USER_SUSPENDED') {
+        setErrors({ general: '정지된 계정입니다. 고객센터에 문의해주세요.' });
+      } else if (status === 429) {
+        setErrors({ general: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' });
+      } else {
+        setErrors({ general: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div style={s.bg}>
       <div style={s.card}>
         {/* 로고 */}
         <div style={s.logo} onClick={() => navigate('/')}>
-          <span style={s.logoIcon}>🪞</span>
-          <span style={s.logoText}>Decal<b>co</b></span>
+          <img src="/Egag_logo-removebg.png" alt="EgAg" style={{ height: 48 }} />
         </div>
 
         <h1 style={s.title}>로그인</h1>
