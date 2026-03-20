@@ -9,4 +9,8 @@ public interface ArtworkRepository extends JpaRepository<Artwork, String> {
     List<Artwork> findByUserId(String userId);
     List<Artwork> findByUserIdAndStatus(String userId, String status);
     List<Artwork> findAllByIsPublicTrue();
+    List<Artwork> findByUserIdAndIsPublicTrueAndStatus(String userId, String status);
+    List<Artwork> findByIsPublicTrueOrderByCreatedAtDesc();
+    List<Artwork> findByIsPublicTrueOrderByLikeCountDesc();
+    List<Artwork> findByTitleContainingIgnoreCaseAndIsPublicTrue(String title);
 }
