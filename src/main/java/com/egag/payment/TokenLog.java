@@ -50,3 +50,4 @@ public class TokenLog {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }
+//push용 주석
