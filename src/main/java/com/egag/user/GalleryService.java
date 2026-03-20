@@ -28,6 +28,16 @@ public class GalleryService {
                 .collect(Collectors.toList());
     }
 
+    /** 내 갤러리 - 로그인한 사용자의 전체 작품 목록 */
+    @Transactional(readOnly = true)
+    public List<ArtworkSummary> getMyArtworks(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        return artworkRepository.findByUserId(user.getId()).stream()
+                .map(ArtworkSummary::new)
+                .collect(Collectors.toList());
+    }
+
     /** Canvas/Decalcomania에서 갤러리 저장 */
     @Transactional
     public void saveToGallery(String email, SaveGalleryRequest req) {

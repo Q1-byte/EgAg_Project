@@ -93,7 +93,7 @@ export const completeOnboarding = (data: { name: string; phone: string; nickname
   client.post<UserProfile>('/users/me/onboarding', data).then(res => res.data)
 
 export const getMyArtworks = () =>
-  client.get<ArtworkSummary[]>('/users/me/artworks').then(res => res.data)
+  client.get<ArtworkSummary[]>('/gallery/my').then(res => res.data)
 
 export const saveArtworkToGallery = (imageUrl: string, userImageData: string, title: string, source: string) =>
   client.post<ArtworkSummary>('/artworks', { imageUrl, userImageData, title, source }).then(res => res.data)

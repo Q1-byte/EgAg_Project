@@ -69,6 +69,17 @@ public class ArtworkController {
         artworkService.togglePublic(id, principal.getUserId());
     }
 
+    // ── 제목 수정 ────────────────────────────────────────────────
+    @PatchMapping("/{id}/title")
+    public ResponseEntity<Void> updateTitle(
+            @PathVariable String id,
+            @AuthenticationPrincipal PrincipalDetails principal,
+            @RequestBody java.util.Map<String, String> body) {
+        if (principal == null) throw new CustomException(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "로그인이 필요합니다.");
+        artworkService.updateTitle(id, principal.getUserId(), body.get("title"));
+        return ResponseEntity.ok().build();
+    }
+
     // ── 신고 ────────────────────────────────────────────────────
     @PostMapping("/{id}/report")
     public void reportArtwork(@PathVariable String id, @AuthenticationPrincipal PrincipalDetails principal, @RequestBody ReportRequest request) {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 import Header from '../components/Header'
 import { getMyProfile, updateMyProfile, changePassword, getMyArtworks, uploadProfilePhoto, toggleArtworkVisibility, deleteArtwork } from '../api/user'
+import { updateArtworkTitle } from '../api/artwork'
 import type { UserProfile, ArtworkSummary } from '../api/user'
 
 type Tab = 'profile' | 'gallery'
@@ -19,6 +20,8 @@ export default function MyPage() {
   const [loadingGallery, setLoadingGallery] = useState(false)
   const [photoLoading, setPhotoLoading] = useState(false)
   const [profileError, setProfileError] = useState(false)
+  const [titleModal, setTitleModal] = useState<ArtworkSummary | null>(null)
+  const [modalTitle, setModalTitle] = useState('')
 
   // 내 정보 변경 패널 토글
   const [showEdit, setShowEdit] = useState(false)
@@ -307,7 +310,9 @@ export default function MyPage() {
             ) : (
               <div style={s.galleryGrid}>
                 {artworks.map(art => (
-                  <div key={art.id} style={s.galleryCard}>
+                  <div key={art.id} style={{ ...s.galleryCard, cursor: 'pointer' }}
+                    onClick={() => { setTitleModal(art); setModalTitle(art.title || '') }}
+                  >
                     {/* 두 이미지 나란히 */}
                     <div style={s.galleryImgRow}>
                       <div style={s.galleryImgWrap}>
@@ -328,7 +333,7 @@ export default function MyPage() {
                     <div style={s.galleryInfo}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
                         <p style={s.galleryDate}>{new Date(art.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '')}</p>
-                        <p style={s.galleryTitle}>{art.title || '제목 없음'}</p>
+                        <p style={s.galleryTitle}>{art.title || 'hi!'}</p>
                       </div>
                       <p style={s.galleryMeta}>
                         {art.topic && <span>#{art.topic} · </span>}
@@ -337,7 +342,7 @@ export default function MyPage() {
                           {art.isPublic ? ' · 공개' : ' · 비공개'}
                         </span>
                       </p>
-                      <div style={s.galleryBtns}>
+                      <div style={s.galleryBtns} onClick={e => e.stopPropagation()}>
                         <button
                           style={{ ...s.galleryBtn, color: art.isPublic ? '#43aa8b' : '#8a7a9a' }}
                           onClick={() => handleToggleVisibility(art.id, art.isPublic)}
@@ -371,6 +376,54 @@ export default function MyPage() {
           </div>
         )}
       </main>
+
+      {/* 제목 입력 모달 */}
+      {titleModal && (
+        <div
+          style={s.modalBackdrop}
+          onClick={() => setTitleModal(null)}
+        >
+          <div style={s.modalCard} onClick={e => e.stopPropagation()}>
+            <p style={s.modalEyebrow}>✦ 작품 감상하기</p>
+            <h2 style={s.modalTitle}>이 작품의 제목을 지어주세요</h2>
+            <p style={s.modalSub}>제목을 입력하고 작품 상세 페이지로 이동해요</p>
+            <input
+              type="text"
+              value={modalTitle}
+              onChange={e => setModalTitle(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && modalTitle.trim()) {
+                  updateArtworkTitle(titleModal.id, modalTitle.trim()).catch(() => {})
+                  navigate(`/artwork/${titleModal.id}`, { state: { title: modalTitle.trim() } })
+                  setTitleModal(null)
+                }
+              }}
+              placeholder="멋진 제목을 입력해주세요..."
+              style={s.modalInput}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+              <button
+                style={{ ...s.primaryBtn, flex: 2, opacity: modalTitle.trim() ? 1 : 0.5 }}
+                disabled={!modalTitle.trim()}
+                onClick={() => {
+                  updateArtworkTitle(titleModal.id, modalTitle.trim()).catch(() => {})
+                  navigate(`/artwork/${titleModal.id}`, { state: { title: modalTitle.trim() } })
+                  setTitleModal(null)
+                }}
+              >
+                감상하러 가기
+              </button>
+              <button
+                style={{ ...s.secondaryBtn, flex: 1 }}
+                onClick={() => setTitleModal(null)}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -550,5 +603,38 @@ const s: Record<string, React.CSSProperties> = {
     flex: 1, padding: '5px 0', fontSize: 11, fontWeight: 600, color: '#6B82A0',
     background: 'rgba(107,130,160,0.08)', border: '1px solid rgba(107,130,160,0.15)',
     borderRadius: 8, cursor: 'pointer',
+  },
+  modalBackdrop: {
+    position: 'fixed', inset: 0, zIndex: 500,
+    background: 'rgba(50,40,70,0.35)', backdropFilter: 'blur(6px)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(245,240,248,0.95) 100%)',
+    borderRadius: 28, padding: '36px 32px',
+    width: '100%', maxWidth: 420,
+    boxShadow: '0 20px 60px rgba(107,130,160,0.2)',
+    border: '1.5px solid rgba(255,255,255,0.8)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+  },
+  modalEyebrow: {
+    fontSize: 11, fontWeight: 700, letterSpacing: 3,
+    color: '#c47a8a', textTransform: 'uppercase', margin: 0,
+  },
+  modalTitle: {
+    fontSize: 20, fontWeight: 900, margin: 0, textAlign: 'center',
+    fontFamily: "'Jua', sans-serif",
+    background: 'linear-gradient(135deg, #c47a8a, #6B82A0)',
+    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+  },
+  modalSub: {
+    fontSize: 13, color: '#a09ab0', margin: 0, textAlign: 'center',
+  },
+  modalInput: {
+    width: '100%', padding: '13px 16px', fontSize: 15,
+    border: '1.5px solid rgba(107,130,160,0.25)', borderRadius: 14, outline: 'none',
+    background: 'rgba(255,255,255,0.85)', color: '#4a4a6a',
+    boxSizing: 'border-box', fontFamily: 'inherit',
   },
 }

@@ -147,6 +147,7 @@ public class ArtworkService {
                 .title(artwork.getTitle())
                 .topic(artwork.getTopic())
                 .imageUrl(artwork.getImageUrl())
+                .userImageData(artwork.getUserImageData())
                 .status(artwork.getStatus())
                 .isPublic(artwork.getIsPublic())
                 .likeCount(artwork.getLikeCount())
@@ -154,6 +155,18 @@ public class ArtworkService {
                 .createdAt(artwork.getCreatedAt())
                 .completedAt(artwork.getCompletedAt())
                 .build();
+    }
+
+    // ── 제목 수정 ────────────────────────────────────────────────
+    @Transactional
+    public void updateTitle(String artworkId, String userId, String title) {
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "ARTWORK_NOT_FOUND", "작품을 찾을 수 없습니다."));
+        if (!artwork.getUser().getId().equals(userId)) {
+            throw new CustomException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", "권한이 없습니다.");
+        }
+        artwork.setTitle(title);
+        artworkRepository.save(artwork);
     }
 
     @Transactional
