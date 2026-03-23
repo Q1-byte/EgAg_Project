@@ -34,6 +34,8 @@ import AdminUserManagement from './pages/admin/UserManagement'; // ✅ 통합 �
 // import UserManagement from './pages/admin/UserManagement'; // 👈 삭제 (더 이상 사용 안 함)
 import PaymentManagement from './pages/admin/PaymentManagement';
 import AdminSidebar from './pages/admin/AdminSidebar';
+import AdminImageManagement from './pages/admin/AdminImageManagement';
+import AdminInquiryManagement from './pages/admin/AdminInquiryManagement';
 
 // 온보딩 가드: 카카오 로그인 후 추가 정보 입력이 필요한 경우 강제 이동
 function OnboardingGuard() {
@@ -101,6 +103,8 @@ function App() {
                     <Route path="users" element={<AdminUserManagement />} />
                     {/* ❌ path="all-users" 라우트 삭제됨 */}
                     <Route path="payments" element={<PaymentManagement />} />
+                    <Route path="images" element={<AdminImageManagement />} />
+                    <Route path="inquiries" element={<AdminInquiryManagement />} />
                 </Route>
 
                 {/* 404 페이지 */}

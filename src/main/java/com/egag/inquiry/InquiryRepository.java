@@ -8,4 +8,8 @@ import java.util.List;
 public interface InquiryRepository extends JpaRepository<Inquiry, String> {
     // 특정 유저의 문의 내역만 가져오는 기능 (마이페이지용)
     List<Inquiry> findByUserIdOrderByCreatedAtDesc(String userId);
+
+    // 상태별 조회 (어드민용)
+    List<Inquiry> findByStatusOrderByCreatedAtAsc(String status);
+    List<Inquiry> findAllByOrderByCreatedAtDesc();
 }

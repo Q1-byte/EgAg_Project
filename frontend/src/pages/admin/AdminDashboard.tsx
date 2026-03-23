@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/useAuthStore';
+
+interface PendingInquiry {
+    id: string;
+    email: string;
+    category: string;
+    title: string;
+    content: string;
+    createdAt: string;
+}
 
 // 📈 대시보드 데이터 타입
 interface DashboardStats {
@@ -13,13 +22,23 @@ interface DashboardStats {
     activeUsers: number;
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+    payment: '결제', account: '계정', bug: '버그', etc: '기타',
+};
+
 const AdminDashboard = () => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const role = useAuthStore((state) => state.role);
     const nickname = useAuthStore((state) => state.nickname);
+    const accessToken = useAuthStore((state) => state.accessToken);
+    const navigate = useNavigate();
 
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [pendingInquiries, setPendingInquiries] = useState<PendingInquiry[]>([]);
+    const [replyMap, setReplyMap] = useState<Record<string, string>>({});
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState<string | null>(null);
 
     // 🔄 통계 데이터 가져오기
     const fetchStats = useCallback(async () => {
@@ -40,11 +59,41 @@ const AdminDashboard = () => {
         }
     }, []);
 
+    const fetchPendingInquiries = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/admin/inquiries/pending?limit=5', {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            setPendingInquiries(res.data);
+        } catch (e) {
+            console.error('문의 로딩 실패', e);
+        }
+    }, [accessToken]);
+
+    const handleReply = async (id: string) => {
+        const reply = replyMap[id]?.trim();
+        if (!reply) return;
+        setSubmitting(id);
+        try {
+            await axios.post(`/api/admin/inquiries/${id}/reply`, { reply }, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            setPendingInquiries(prev => prev.filter(i => i.id !== id));
+            setReplyMap(prev => { const n = { ...prev }; delete n[id]; return n; });
+            setExpandedId(null);
+        } catch {
+            alert('답변 등록에 실패했습니다.');
+        } finally {
+            setSubmitting(null);
+        }
+    };
+
     useEffect(() => {
         if (isAuthenticated && role === 'ADMIN') {
             fetchStats();
+            fetchPendingInquiries();
         }
-    }, [isAuthenticated, role, fetchStats]);
+    }, [isAuthenticated, role, fetchStats, fetchPendingInquiries]);
 
     if (!isAuthenticated || role !== 'ADMIN') {
         return <Navigate to="/" replace />;
@@ -93,6 +142,64 @@ const AdminDashboard = () => {
                 <div style={s.emptyState}>통계 데이터를 표시할 수 없습니다. 😥</div>
             )}
 
+            {/* 📬 응답 대기 문의 */}
+            <div style={s.inquirySection}>
+                <div style={s.inquirySectionHeader}>
+                    <h3 style={s.sectionSubTitle}>📬 응답 대기 중
+                        {pendingInquiries.length > 0 && (
+                            <span style={s.pendingCount}>{pendingInquiries.length}</span>
+                        )}
+                    </h3>
+                    <button style={s.goInquiryBtn} onClick={() => navigate('/admin/inquiries')}>
+                        문의게시판 바로가기 →
+                    </button>
+                </div>
+
+                {pendingInquiries.length === 0 ? (
+                    <div style={s.inquiryEmpty}>미응답 문의가 없습니다.</div>
+                ) : (
+                    <div style={s.inquiryList}>
+                        {pendingInquiries.map(item => (
+                            <div key={item.id} style={s.inquiryCard}>
+                                <div style={s.inquiryCardHeader} onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
+                                    <div style={s.inquiryMeta}>
+                                        <span style={s.inquiryCategoryTag}>{CATEGORY_LABELS[item.category] ?? item.category}</span>
+                                        <span style={s.inquiryTitle}>{item.title}</span>
+                                    </div>
+                                    <div style={s.inquiryRight}>
+                                        <span style={s.inquiryEmail}>{item.email}</span>
+                                        <span style={s.inquiryDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</span>
+                                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{expandedId === item.id ? '▲' : '▼'}</span>
+                                    </div>
+                                </div>
+
+                                {expandedId === item.id && (
+                                    <div style={s.inquiryExpanded}>
+                                        <p style={s.inquiryContent}>{item.content}</p>
+                                        <div style={s.replyForm}>
+                                            <textarea
+                                                style={s.textarea}
+                                                placeholder="이메일로 발송할 답변 내용을 입력하세요..."
+                                                value={replyMap[item.id] ?? ''}
+                                                onChange={e => setReplyMap(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                                rows={3}
+                                            />
+                                            <button
+                                                style={{ ...s.submitBtn, opacity: submitting === item.id ? 0.6 : 1 }}
+                                                onClick={() => handleReply(item.id)}
+                                                disabled={submitting === item.id || !replyMap[item.id]?.trim()}
+                                            >
+                                                {submitting === item.id ? '발송 중...' : '이메일로 답변 발송'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             {/* 💡 바로가기 섹션 */}
             <div style={s.quickMenu}>
                 <h3 style={s.sectionSubTitle}>🚀 빠른 관리 메뉴</h3>
@@ -131,6 +238,25 @@ const s: Record<string, React.CSSProperties> = {
     cardLabel: { fontSize: '15px', fontWeight: 700, color: '#6B7280', marginBottom: '10px' },
     cardValue: { fontSize: '28px', fontWeight: 900, color: '#1F2937', marginBottom: '8px' },
     cardSub: { fontSize: '14px', color: '#9CA3AF' },
+    inquirySection: { marginBottom: '40px' },
+    inquirySectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
+    pendingCount: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F59E0B', color: '#fff', fontSize: '11px', fontWeight: 800, borderRadius: '50%', width: '20px', height: '20px', marginLeft: '8px' },
+    goInquiryBtn: { padding: '8px 18px', background: '#EDE9FE', color: '#7C3AED', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' },
+    inquiryEmpty: { textAlign: 'center', padding: '32px', background: '#F9FAFB', borderRadius: '14px', color: '#9CA3AF', fontSize: '14px' },
+    inquiryList: { display: 'flex', flexDirection: 'column', gap: '10px' },
+    inquiryCard: { background: '#fff', borderRadius: '12px', border: '1.5px solid #E5E7EB', borderLeft: '4px solid #F59E0B', boxShadow: '0 2px 6px rgba(0,0,0,0.04)', overflow: 'hidden' },
+    inquiryCardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', cursor: 'pointer' },
+    inquiryMeta: { display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 },
+    inquiryCategoryTag: { background: '#FEF3C7', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', whiteSpace: 'nowrap' as const },
+    inquiryTitle: { fontSize: '14px', fontWeight: 600, color: '#1F2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+    inquiryRight: { display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 },
+    inquiryEmail: { fontSize: '12px', color: '#9CA3AF' },
+    inquiryDate: { fontSize: '12px', color: '#9CA3AF' },
+    inquiryExpanded: { padding: '0 18px 16px', borderTop: '1px solid #F3F4F6' },
+    inquiryContent: { fontSize: '13px', color: '#374151', lineHeight: 1.7, margin: '12px 0', padding: '12px', background: '#F9FAFB', borderRadius: '8px' },
+    replyForm: { display: 'flex', flexDirection: 'column', gap: '8px' },
+    textarea: { width: '100%', padding: '10px 12px', fontSize: '13px', border: '1.5px solid #E5E7EB', borderRadius: '10px', resize: 'vertical' as const, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' },
+    submitBtn: { alignSelf: 'flex-end', padding: '9px 22px', background: 'linear-gradient(135deg,#7C3AED,#6366F1)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' },
     quickMenu: { marginTop: '20px' },
     sectionSubTitle: { fontSize: '20px', fontWeight: 800, color: '#5B21B6', marginBottom: '20px' },
     menuBtn: {

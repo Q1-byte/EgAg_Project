@@ -25,6 +25,21 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    @Async
+    public void sendInquiryReply(String toEmail, String title, String reply) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("[이그에그] 문의하신 내용에 답변이 도착했습니다.");
+        message.setText("안녕하세요, 이그에그(EggEgg) 팀입니다.\n\n" +
+                "고객님께서 문의하신 '" + title + "'에 대한 답변을 드립니다.\n\n" +
+                "─────────────────────────────\n" +
+                reply + "\n" +
+                "─────────────────────────────\n\n" +
+                "추가 문의사항이 있으시면 언제든지 문의해 주세요.\n" +
+                "감사합니다.");
+        mailSender.send(message);
+    }
+
     // [2] 신규 정책 변경 알림 메일 (추가된 부분)
     @Async
     public void sendPolicyChangeNotification(String toEmail, String policyName, String effectiveDate) {
