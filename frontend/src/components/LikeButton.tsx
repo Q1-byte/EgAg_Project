@@ -53,15 +53,17 @@ const LikeButton: React.FC<LikeButtonProps> = ({ isLiked, likeCount, onToggle, d
   }, [isLiked])
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
     if (disabled) return
-    
+
     // 소리 없이 시각적 효과만 트리거
     if (!isLiked) {
         triggerBurst(e)
         setIsAnimating(true)
         setTimeout(() => setIsAnimating(false), 500)
     }
-    
+
     onToggle()
   }
 
