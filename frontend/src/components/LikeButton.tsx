@@ -107,7 +107,7 @@ const LikeButton: React.FC<LikeButtonProps> = ({ isLiked, likeCount, onToggle, d
             transition: 'transform 0.2s',
         }}
       />
-      {variant !== 'slim' && <span>{isLiked ? '좋아요 완료!' : '응원하기'}</span>}
+      {variant !== 'slim' && <span>{isLiked ? '좋아요!' : '응원하기'}</span>}
       <span style={{ 
           fontSize: variant === 'slim' ? '11px' : '13px', 
           opacity: 0.9, 
