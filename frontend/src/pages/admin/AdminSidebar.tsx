@@ -24,14 +24,15 @@ const AdminSidebar = () => {
     return (
         <div style={s.layout}>
             <aside style={s.sidebar}>
-                <div style={s.logoSection}>
+                {/* 🌟 Link 태그에 중앙 정렬 스타일을 직접 추가했습니다 */}
+                <Link to="/" style={s.logoWrapper}>
                     <img
                         src="/Egag_logo-removebg.png"
                         alt="이그에그 로고"
                         style={s.logoImg}
                     />
                     <p style={s.subLogo}>ADMIN PANEL</p>
-                </div>
+                </Link>
 
                 <nav style={s.nav}>
                     {menuItems.map((item) => {
@@ -84,12 +85,14 @@ const s: Record<string, React.CSSProperties> = {
         height: '100vh',
         zIndex: 100
     },
-    logoSection: {
+    logoWrapper: {
         padding: '40px 20px 30px',
-        textAlign: 'center',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center'
+        alignItems: 'center',
+        justifyContent: 'center',
+        textDecoration: 'none',
+        transition: 'transform 0.2s',
     },
     logoImg: {
         width: '120px',
@@ -102,7 +105,8 @@ const s: Record<string, React.CSSProperties> = {
         color: '#9CA3AF',
         fontWeight: 700,
         letterSpacing: '1.5px',
-        textTransform: 'uppercase'
+        textTransform: 'uppercase',
+        margin: 0
     },
     nav: {
         flex: 1,
