@@ -24,7 +24,6 @@ const AdminSidebar = () => {
     return (
         <div style={s.layout}>
             <aside style={s.sidebar}>
-                {/* 🌟 Link 태그에 중앙 정렬 스타일을 직접 추가했습니다 */}
                 <Link to="/" style={s.logoWrapper}>
                     <img
                         src="/Egag_logo-removebg.png"

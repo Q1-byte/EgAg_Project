@@ -3,7 +3,6 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from './stores/useAuthStore'
 import { useTokenRefresh } from './hooks/useTokenRefresh'
 
-
 // 페이지 컴포넌트들
 import Canvas from './pages/Canvas'
 import Decalcomania from './pages/Decalcomania'
@@ -32,16 +31,12 @@ import EditProfile from './artwork/EditProfile'
 
 // 어드민 컴포넌트들
 import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminUserManagement from './pages/admin/UserManagement'; // ✅ 통합 관리 페이지
+import AdminUserManagement from './pages/admin/UserManagement';
 import PaymentManagement from './pages/admin/PaymentManagement';
 import AdminSidebar from './pages/admin/AdminSidebar';
 import AdminImageManagement from './pages/admin/AdminImageManagement';
 import AdminInquiryManagement from './pages/admin/AdminInquiryManagement';
 
-/**
- * 💡 스크롤 복구 컴포넌트
- * 페이지 경로(pathname)가 바뀔 때마다 윈도우 스크롤을 맨 위로 이동시킵니다.
- */
 function ScrollToTop() {
     const { pathname } = useLocation()
 
@@ -71,7 +66,7 @@ function App() {
     useTokenRefresh()
     return (
         <>
-            <ScrollToTop /> {/* ⭐ 스크롤 복구 컴포넌트 추가 */}
+            <ScrollToTop />
             <OnboardingGuard />
             <Routes>
                 {/* --- 일반 사용자 페이지 --- */}
@@ -114,13 +109,14 @@ function App() {
                 <Route path="/admin" element={<AdminSidebar />}>
                     <Route index element={<AdminDashboard />} />
                     <Route path="dashboard" element={<AdminDashboard />} />
+                    {/* ✅ 통합 유저 관리 (토큰 + 상태 변경) */}
                     <Route path="users" element={<AdminUserManagement />} />
                     <Route path="payments" element={<PaymentManagement />} />
                     <Route path="images" element={<AdminImageManagement />} />
                     <Route path="inquiries" element={<AdminInquiryManagement />} />
                 </Route>
 
-                {/* 404 페이지 */}
+                {/* 404 / 500 페이지 */}
                 <Route path="/500" element={<InternalError />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
