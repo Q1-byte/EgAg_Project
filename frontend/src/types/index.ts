@@ -49,12 +49,15 @@ export interface AuthResponse {
 
 export interface NotificationResponse {
   id: string
-  type: 'LIKE' | 'FOLLOW' | 'FINISHED' | 'TOKEN'
+  type: 'LIKE' | 'FOLLOW' | 'FINISHED' | 'TOKEN' | 'INQUIRY_REPLY'
   actorId: string
   actorNickname: string
   actorProfileImage: string | null
   artworkId: string | null
   artworkTitle: string | null
+  message: string | null
+  amount?: number
+  reason?: string
   isRead: boolean
   createdAt: string
 }

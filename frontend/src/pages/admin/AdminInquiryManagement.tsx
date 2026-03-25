@@ -1,227 +1,239 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { getAdminInquiries, submitInquiryAnswer } from '../../api/adminApi';
 
-interface InquiryItem {
+interface Inquiry {
     id: string;
-    email: string;
-    category: string;
     title: string;
     content: string;
+    authorNickname: string;
+    email: string;
+    category: string;
     status: string;
     reply: string | null;
     createdAt: string;
-    repliedAt: string | null;
 }
-
-const CATEGORY_LABELS: Record<string, string> = {
-    payment: '결제', account: '계정', bug: '버그', etc: '기타',
-};
 
 const AdminInquiryManagement = () => {
     const { accessToken } = useAuthStore();
-    const [inquiries, setInquiries] = useState<InquiryItem[]>([]);
-    const [filter, setFilter] = useState<'all' | 'pending' | 'replied'>('all');
+    const [inquiries, setInquiries] = useState<Inquiry[]>([]);
     const [loading, setLoading] = useState(true);
-    const [replyMap, setReplyMap] = useState<Record<string, string>>({});
-    const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [submitting, setSubmitting] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [answerText, setAnswerText] = useState('');
+    
+    // 페이징 및 검색 상태
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [searchKeyword, setSearchKeyword] = useState('');
 
-    const headers = { Authorization: `Bearer ${accessToken}` };
-
-    const fetchInquiries = async () => {
-        setLoading(true);
+    const fetchInquiries = useCallback(async () => {
+        if (!accessToken) return;
         try {
-            const res = await axios.get(`/api/admin/inquiries?status=${filter === 'all' ? 'all' : filter}`, { headers });
-            setInquiries(res.data);
-        } catch (e) {
-            console.error('문의 목록 로딩 실패', e);
+            setLoading(true);
+            const data = await getAdminInquiries(page, 10, statusFilter, searchKeyword);
+            setInquiries(data.content || []);
+            setTotalPages(data.totalPages || 0);
+        } catch (err) {
+            console.error("문의 목록 로드 에러:", err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [accessToken, page, statusFilter, searchKeyword]);
 
-    useEffect(() => { void fetchInquiries(); }, [filter]);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            void fetchInquiries();
+        }, 300); // 디바운싱
+        return () => clearTimeout(timer);
+    }, [fetchInquiries]);
 
-    const handleReply = async (id: string) => {
-        const reply = replyMap[id]?.trim();
-        if (!reply) return;
-        setSubmitting(id);
+    const handleAnswerSubmit = async (id: string) => {
+        if (!answerText.trim()) return;
         try {
-            await axios.post(`/api/admin/inquiries/${id}/reply`, { reply }, { headers });
-            setInquiries(prev => prev.map(i => i.id === id ? { ...i, status: 'replied', reply } : i));
-            setReplyMap(prev => { const n = { ...prev }; delete n[id]; return n; });
-            setExpandedId(null);
-        } catch (e) {
-            alert('답변 등록에 실패했습니다.');
-        } finally {
-            setSubmitting(null);
+            await submitInquiryAnswer(id, answerText);
+            alert("답변이 등록되었습니다. ✨");
+            setAnswerText('');
+            setSelectedId(null);
+            void fetchInquiries();
+        } catch {
+            alert("답변 등록에 실패했습니다.");
         }
     };
-
-    const filtered = filter === 'all' ? inquiries : inquiries.filter(i => i.status === filter);
 
     return (
         <div style={s.container}>
             <header style={s.header}>
-                <div>
-                    <h1 style={s.title}>📬 문의게시판 관리</h1>
-                    <p style={s.meta}>사용자들의 소중한 문의를 확인하고 정성껏 답변해 주세요. ✨</p>
+                <div style={s.headerLeft}>
+                    <h1 style={s.title}>고객 문의 관리</h1>
+                    <p style={s.subtitle}>사용자의 피드백에 귀를 기울이고 최상의 서포트를 제공하세요. 💬</p>
                 </div>
-                <div style={s.countsCard}>
-                    <div style={s.statItem}>
-                        <span style={s.statLabel}>미응답</span>
-                        <span style={{...s.statValue, color: '#F59E0B'}}>{inquiries.filter(i => i.status === 'pending').length}</span>
+                
+                <div style={s.controls}>
+                    <div style={s.searchBox}>
+                        <span style={s.searchIcon}>🔍</span>
+                        <input 
+                            style={s.searchInput}
+                            placeholder="제목 또는 내용 검색..."
+                            value={searchKeyword}
+                            onChange={(e) => {
+                                setSearchKeyword(e.target.value);
+                                setPage(0);
+                            }}
+                        />
                     </div>
-                    <div style={s.dividerVert} />
-                    <div style={s.statItem}>
-                        <span style={s.statLabel}>완료</span>
-                        <span style={{...s.statValue, color: '#10B981'}}>{inquiries.filter(i => i.status === 'replied').length}</span>
-                    </div>
+                    <select 
+                        style={s.select}
+                        value={statusFilter}
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value);
+                            setPage(0);
+                        }}
+                    >
+                        <option value="all">전체 상태</option>
+                        <option value="pending">답변 대기</option>
+                        <option value="replied">답변 완료</option>
+                    </select>
                 </div>
             </header>
 
-            {/* 필터 탭 */}
-            <div style={s.tabsWrapper}>
-                <div style={s.tabs}>
-                    {(['all', 'pending', 'replied'] as const).map(f => (
-                        <button 
-                            key={f} 
-                            style={{ 
-                                ...s.tab, 
-                                backgroundColor: filter === f ? '#7C3AED' : 'rgba(255,255,255,0.5)',
-                                color: filter === f ? '#fff' : '#6B7280',
-                                border: filter === f ? '1px solid #7C3AED' : '1px solid rgba(229, 231, 235, 0.5)',
-                            }} 
-                            onClick={() => setFilter(f)}
-                        >
-                            {f === 'all' ? '전체 보기' : f === 'pending' ? '미응답 문의' : '답변 완료건'}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {loading ? (
-                <div style={s.emptyState}>불러오는 중... 🔄</div>
-            ) : filtered.length === 0 ? (
-                <div style={s.emptyState}>표시할 문의가 없습니다. ✨</div>
-            ) : (
-                <div style={s.list}>
-                    {filtered.map(item => (
-                        <div key={item.id} style={{ ...s.card, borderLeft: `6px solid ${item.status === 'pending' ? '#F59E0B' : '#10B981'}` }}>
-                            <div style={s.cardHeader} onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}>
-                                <div style={s.cardMeta}>
-                                    <span style={s.categoryTag}>{CATEGORY_LABELS[item.category] || item.category}</span>
-                                    <span style={s.cardTitle}>{item.title}</span>
+            <div style={s.list}>
+                {loading ? (
+                    <div style={s.card}>
+                        <p style={{ ...s.cardContent, textAlign: 'center', padding: '40px 0', margin: 0, fontWeight: 700, color: '#94A3B8' }}> ⏳ 문의 내역을 불러오고 있습니다...</p>
+                    </div>
+                ) : inquiries.length > 0 ? (
+                    inquiries.map((iq) => (
+                        <div key={iq.id} style={s.card}>
+                            <div style={s.cardHeader}>
+                                <div style={s.meta}>
+                                    <span style={s.category}>[{iq.category}]</span>
+                                    <span style={s.author}>{iq.authorNickname}</span>
+                                    <span style={s.email}>({iq.email})</span>
+                                    <span style={s.dot}>•</span>
+                                    <span style={s.date}>{new Date(iq.createdAt).toLocaleString()}</span>
                                 </div>
-                                <div style={s.cardRight}>
-                                    <span style={s.cardEmail}>{item.email}</span>
-                                    <span style={s.cardDate}>{new Date(item.createdAt).toLocaleDateString()}</span>
-                                    <span style={s.chevron}>{expandedId === item.id ? '▴' : '▾'}</span>
-                                </div>
+                                <span style={{...s.statusBadge, backgroundColor: iq.status === 'replied' ? '#D1FAE5' : '#FEF3C7', color: iq.status === 'replied' ? '#065F46' : '#92400E'}}>
+                                    {iq.status === 'replied' ? '답변완료' : '답변대기'}
+                                </span>
                             </div>
+                            <h3 style={s.cardTitle}>{iq.title}</h3>
+                            <p style={s.cardContent}>{iq.content}</p>
 
-                            {expandedId === item.id && (
-                                <div style={s.expanded}>
-                                    <div style={s.divider} />
-                                    <p style={s.contentText}>{item.content}</p>
-
-                                    {item.status === 'replied' && item.reply ? (
-                                        <div style={s.repliedBox}>
-                                            <div style={s.replyHeader}>
-                                                <span style={s.replyLabel}>✅ 관리자 답변 완료</span>
-                                                <span style={s.replyDate}>{item.repliedAt ? new Date(item.repliedAt).toLocaleString() : ''}</span>
-                                            </div>
-                                            <p style={s.replyText}>{item.reply}</p>
-                                        </div>
-                                    ) : (
-                                        <div style={s.replyForm}>
-                                            <h4 style={s.formTitle}>답변 작성하기</h4>
-                                            <textarea
-                                                style={s.textarea}
-                                                placeholder="사용자에게 전송될 답변 내용을 입력하세요..."
-                                                value={replyMap[item.id] ?? ''}
-                                                onChange={e => setReplyMap(prev => ({ ...prev, [item.id]: e.target.value }))}
-                                                rows={5}
-                                            />
-                                            <button
-                                                style={{ ...s.submitBtn, opacity: submitting === item.id ? 0.6 : 1 }}
-                                                onClick={() => void handleReply(item.id)}
-                                                disabled={submitting === item.id || !replyMap[item.id]?.trim()}
-                                            >
-                                                {submitting === item.id ? '답변 발송 중...' : '이메일로 답변 발송하기'}
-                                            </button>
-                                        </div>
-                                    )}
+                            {iq.reply ? (
+                                <div style={s.answerBox}>
+                                    <div style={s.answerLabel}>공식 답변</div>
+                                    <p style={s.answerText}>{iq.reply}</p>
                                 </div>
+                            ) : selectedId === iq.id ? (
+                                <div style={s.replyForm}>
+                                    <textarea 
+                                        style={s.textarea} 
+                                        placeholder="전문적이고 친절한 답변을 작성해주세요..."
+                                        value={answerText}
+                                        onChange={(e) => setAnswerText(e.target.value)}
+                                    />
+                                    <div style={s.formActions}>
+                                        <button onClick={() => void handleAnswerSubmit(iq.id)} style={s.submitBtn}>답변 등록</button>
+                                        <button onClick={() => setSelectedId(null)} style={s.cancelBtn}>취소</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={() => setSelectedId(iq.id)} style={s.replyBtn}>답변 작성하기</button>
                             )}
                         </div>
-                    ))}
+                    ))
+                ) : (
+                    <div style={{ ...s.card, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', padding: '80px', background: 'linear-gradient(to bottom, #FFF, #F8FAFC)' }}>
+                        <div style={{ width: '64px', height: '64px', backgroundColor: '#F1F5F9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '32px' }}>💬</span>
+                        </div>
+                        <h3 style={{ ...s.cardTitle, margin: 0, color: '#1E293B' }}>검색 결과가 없습니다.</h3>
+                        <p style={{ ...s.cardContent, margin: 0, color: '#94A3B8', fontSize: '14px' }}>다른 검색어나 필터를 사용해 보세요.</p>
+                    </div>
+                )}
+            </div>
+
+            {totalPages > 1 && (
+                <div style={s.pagination}>
+                    <button 
+                        disabled={page === 0} 
+                        onClick={() => setPage(p => p - 1)}
+                        style={{...s.pageBtn, opacity: page === 0 ? 0.5 : 1}}
+                    >이전</button>
+                    <div style={s.pageNumbers}>
+                        {Array.from({ length: totalPages }, (_, i) => (
+                            <button 
+                                key={i}
+                                onClick={() => setPage(i)}
+                                style={{...s.pageNumber, backgroundColor: page === i ? '#6366F1' : 'transparent', color: page === i ? '#FFF' : '#64748B'}}
+                            >{i + 1}</button>
+                        ))}
+                    </div>
+                    <button 
+                        disabled={page === totalPages - 1} 
+                        onClick={() => setPage(p => p + 1)}
+                        style={{...s.pageBtn, opacity: page === totalPages - 1 ? 0.5 : 1}}
+                    >다음</button>
                 </div>
             )}
         </div>
     );
 };
 
-// 🌌 스타일 디자인 (Glassmorphism & Unified Admin Layout)
 const s: Record<string, React.CSSProperties> = {
-    container: { padding: '40px 10px', maxWidth: '1000px', margin: '0 auto' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' },
-    title: { fontSize: '28px', fontWeight: 900, color: '#4C1D95', margin: '0 0 8px' },
-    meta: { fontSize: '15px', color: '#7C3AED', fontWeight: 600, opacity: 0.8, margin: 0 },
+    container: { padding: '20px 0' },
+    header: { marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' },
+    headerLeft: { flex: 1, minWidth: '300px' },
+    title: { fontSize: '28px', fontWeight: 900, color: '#0F172A', margin: 0 },
+    subtitle: { fontSize: '15px', color: '#64748B', fontWeight: 500, marginTop: '4px' },
     
-    countsCard: { 
-        display: 'flex', alignItems: 'center', gap: '20px', 
-        backgroundColor: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)',
-        padding: '15px 25px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.5)',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.03)'
+    controls: { display: 'flex', gap: '12px', alignItems: 'center' },
+    searchBox: { position: 'relative', display: 'flex', alignItems: 'center' },
+    searchIcon: { position: 'absolute', left: '15px', fontSize: '14px', color: '#94A3B8' },
+    searchInput: { 
+        padding: '12px 15px 12px 40px', borderRadius: '12px', border: '1px solid #E2E8F0', 
+        fontSize: '14px', width: '250px', outline: 'none', transition: 'all 0.2s',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
     },
-    statItem: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-    statLabel: { fontSize: '11px', fontWeight: 800, color: '#9CA3AF', marginBottom: '2px' },
-    statValue: { fontSize: '18px', fontWeight: 900 },
-    dividerVert: { width: '1px', height: '24px', backgroundColor: 'rgba(229, 231, 235, 0.8)' },
+    select: { 
+        padding: '12px 15px', borderRadius: '12px', border: '1px solid #E2E8F0', 
+        fontSize: '14px', outline: 'none', backgroundColor: '#FFF', cursor: 'pointer',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+    },
 
-    tabsWrapper: { marginBottom: '30px' },
-    tabs: { display: 'flex', gap: '10px' },
-    tab: { padding: '10px 22px', borderRadius: '15px', cursor: 'pointer', fontSize: '14px', fontWeight: 700, transition: 'all 0.2s' },
-
-    list: { display: 'flex', flexDirection: 'column', gap: '18px' },
+    list: { display: 'flex', flexDirection: 'column', gap: '20px' },
     card: { 
-        backgroundColor: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)',
-        borderRadius: '25px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.5)',
-        boxShadow: '0 8px 32px rgba(139, 92, 246, 0.05)', transition: 'all 0.3s'
+        backgroundColor: '#FFF', borderRadius: '24px', padding: '30px', 
+        border: '1px solid #F1F5F9', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' 
     },
-    cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '22px 28px', cursor: 'pointer' },
-    cardMeta: { display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0 },
-    categoryTag: { backgroundColor: 'rgba(124, 58, 237, 0.1)', color: '#7C3AED', fontSize: '11px', fontWeight: 800, padding: '5px 12px', borderRadius: '8px' },
-    cardTitle: { fontSize: '16px', fontWeight: 800, color: '#1F2937', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
-    cardRight: { display: 'flex', alignItems: 'center', gap: '15px' },
-    cardEmail: { fontSize: '13px', color: '#9CA3AF' },
-    cardDate: { fontSize: '13px', color: '#9CA3AF' },
-    chevron: { color: '#9CA3AF', fontSize: '14px' },
+    cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
+    meta: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
+    category: { fontSize: '12px', fontWeight: 900, color: '#6366F1' },
+    author: { fontSize: '14px', fontWeight: 800, color: '#1E293B' },
+    email: { fontSize: '12px', color: '#94A3B8', fontWeight: 500 },
+    dot: { color: '#CBD5E1' },
+    date: { fontSize: '13px', color: '#94A3B8', fontWeight: 500 },
+    statusBadge: { padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800 },
+    
+    cardTitle: { fontSize: '18px', fontWeight: 800, color: '#1E293B', margin: '0 0 10px 0' },
+    cardContent: { fontSize: '15px', color: '#64748B', lineHeight: '1.6', margin: '0 0 20px 0' },
 
-    divider: { height: '1px', backgroundColor: 'rgba(229, 231, 235, 0.4)', margin: '0 28px' },
-    expanded: { padding: '0 28px 25px' },
-    contentText: { fontSize: '15px', color: '#4B5563', lineHeight: 1.7, margin: '25px 0', padding: '20px', backgroundColor: 'rgba(124, 58, 237, 0.03)', borderRadius: '20px', whiteSpace: 'pre-wrap' as const },
+    answerBox: { backgroundColor: '#F8FAFC', padding: '20px', borderRadius: '16px', borderLeft: '4px solid #6366F1' },
+    answerLabel: { fontSize: '10px', fontWeight: 900, color: '#6366F1', marginBottom: '8px', letterSpacing: '1px' },
+    answerText: { fontSize: '14px', color: '#1E293B', margin: 0, lineHeight: '1.5' },
 
-    repliedBox: { backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '20px', padding: '20px', border: '1px solid rgba(16, 185, 129, 0.1)' },
-    replyHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '10px' },
-    replyLabel: { fontSize: '12px', fontWeight: 900, color: '#10B981' },
-    replyDate: { fontSize: '12px', color: '#10B981', opacity: 0.7 },
-    replyText: { fontSize: '15px', color: '#1F2937', margin: 0, lineHeight: 1.6 },
+    replyBtn: { backgroundColor: '#0F172A', color: '#FFF', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' },
+    replyForm: { marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' },
+    textarea: { width: '100%', height: '100px', padding: '15px', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '14px', outline: 'none', resize: 'none' },
+    formActions: { display: 'flex', gap: '10px' },
+    submitBtn: { backgroundColor: '#6366F1', color: '#FFF', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' },
+    cancelBtn: { backgroundColor: '#E2E8F0', color: '#64748B', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' },
 
-    replyForm: { display: 'flex', flexDirection: 'column', gap: '15px' },
-    formTitle: { fontSize: '16px', fontWeight: 800, color: '#1F2937', margin: 0 },
-    textarea: { 
-        width: '100%', padding: '18px', borderRadius: '18px', border: '1px solid rgba(209, 213, 219, 0.5)', 
-        fontSize: '15px', outline: 'none', resize: 'vertical' as const, backgroundColor: '#fff', fontFamily: 'inherit'
-    },
-    submitBtn: { 
-        alignSelf: 'flex-end', padding: '14px 30px', background: '#7C3AED', color: '#fff', border: 'none', 
-        borderRadius: '15px', fontWeight: 800, fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.2)' 
-    },
-
-    emptyState: { textAlign: 'center', padding: '100px 0', color: '#9CA3AF', fontSize: '18px', fontWeight: 600 }
+    pagination: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginTop: '40px' },
+    pageBtn: { backgroundColor: '#FFF', border: '1px solid #E2E8F0', padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#64748B' },
+    pageNumbers: { display: 'flex', gap: '8px' },
+    pageNumber: { width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', border: 'none', fontSize: '14px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }
 };
 
 export default AdminInquiryManagement;

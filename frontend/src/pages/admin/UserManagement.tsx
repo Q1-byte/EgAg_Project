@@ -1,420 +1,324 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios';
-import { Navigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { 
+    getAllAdminUsers, 
+    searchAdminUser, 
+    toggleUserStatus, 
+    giveManualToken,
+    getTokenLogs
+} from '../../api/adminApi';
 
-// 👤 인터페이스 정의
-interface UserInfo {
+interface User {
     id: string;
     nickname: string;
     email: string;
-    tokenBalance: number;
-    isSuspended: boolean;
     role: string;
+    tokenBalance: number;
+    isActive: boolean;
     createdAt: string;
 }
 
 interface TokenLog {
-    id: string;
+    id: number;
+    userId: string;
+    nickname: string;
     amount: number;
     reason: string;
-    type: string;
     createdAt: string;
-    user?: { id: string; nickname: string };
-    admin?: { id: string; nickname: string } | null;
 }
 
 const UserManagement = () => {
-    const { isAuthenticated, role, accessToken } = useAuthStore();
-
-    // 상태 관리
-    const [searchKeyword, setSearchKeyword] = useState('');
-    const [filterSearchTerm, setFilterSearchTerm] = useState('');
-    const [filter, setFilter] = useState<'ALL' | 'USER' | 'ADMIN' | 'SUSPENDED'>('ALL');
-
-    const [user, setUser] = useState<UserInfo | null>(null);
-    const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
-    const [tokenAmount, setTokenAmount] = useState(10); // 기본값 10으로 변경 (develop 반영)
-    const [reason, setReason] = useState('결제 오류 보상');
-    const [logs, setLogs] = useState<TokenLog[]>([]);
+    const { accessToken } = useAuthStore();
+    const [users, setUsers] = useState<User[]>([]);
+    const [tokenLogs, setTokenLogs] = useState<TokenLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [activeTab, setActiveTab] = useState<'users' | 'tokens'>('users');
 
-    const getAuthHeader = useCallback(() => ({
-        headers: { Authorization: `Bearer ${accessToken}` }
-    }), [accessToken]);
+    // 🪙 토큰 지급 모달 상태
+    const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [tokenAmount, setTokenAmount] = useState(0);
+    const [tokenReason, setTokenReason] = useState('');
 
-    // ✅ 데이터 로딩
     const fetchData = useCallback(async () => {
         if (!accessToken) return;
         try {
             setLoading(true);
-            const [logsRes, usersRes] = await Promise.all([
-                axios.get('/api/admin/tokens/logs', getAuthHeader()),
-                axios.get('/api/admin/users/all', getAuthHeader())
+            const [usersData, logsData] = await Promise.all([
+                getAllAdminUsers(),
+                getTokenLogs()
             ]);
-            setLogs(logsRes.data);
-            setAllUsers(usersRes.data);
-        } catch (error) {
-            console.error("데이터 로드 중 에러 발생:", error);
+            setUsers(usersData);
+            setTokenLogs(logsData);
+        } catch (err) {
+            console.error("데이터 로드 실패:", err);
         } finally {
             setLoading(false);
         }
-    }, [accessToken, getAuthHeader]);
+    }, [accessToken]);
 
     useEffect(() => {
-        const isAdmin = role === 'ADMIN' || String(role) === '100';
-        if (isAuthenticated && isAdmin && accessToken) {
+        void fetchData();
+    }, [fetchData]);
+
+    const handleSearch = async () => {
+        if (!searchKeyword.trim()) {
             void fetchData();
+            return;
         }
-    }, [isAuthenticated, role, accessToken, fetchData]);
-
-    // ✅ 필터링 로직
-    const filteredUsers = useMemo(() => {
-        return allUsers.filter(u => {
-            const matchesFilter =
-                filter === 'ALL' ||
-                (filter === 'ADMIN' && u.role === 'ADMIN') ||
-                (filter === 'USER' && u.role === 'USER') ||
-                (filter === 'SUSPENDED' && u.isSuspended);
-
-            const matchesSearch =
-                u.nickname.toLowerCase().includes(filterSearchTerm.toLowerCase()) ||
-                u.email.toLowerCase().includes(filterSearchTerm.toLowerCase());
-
-            return matchesFilter && matchesSearch;
-        });
-    }, [allUsers, filter, filterSearchTerm]);
-
-    if (!isAuthenticated || (role !== 'ADMIN' && String(role) !== '100')) {
-        return <Navigate to="/" replace />;
-    }
-
-    // ✅ 핸들러 함수들
-    const handleSearch = async (manualKeyword?: string) => {
-        const keyword = manualKeyword ?? searchKeyword;
-        if (!keyword.trim()) return;
         try {
-            const res = await axios.get(`/api/admin/users/search`, {
-                params: { keyword: keyword },
-                ...getAuthHeader()
-            });
-            setUser(res.data);
-        } catch {
-            alert("유저를 찾을 수 없습니다.");
-            setUser(null);
+            setLoading(true);
+            const result = await searchAdminUser(searchKeyword);
+            setUsers(result);
+        } catch (err) {
+            console.error("검색 실패:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleToggleStatus = async (userId: string) => {
+        if (!confirm("해당 사용자의 활성 상태를 변경하시겠습니까?")) return;
+        try {
+            await toggleUserStatus(userId);
+            setUsers(users.map(u => u.id === userId ? { ...u, isActive: !u.isActive } : u));
+        } catch (err) {
+            alert("상태 변경에 실패했습니다.");
         }
     };
 
     const handleGiveToken = async () => {
-        if (!user) return;
-        if (tokenAmount <= 0) return alert("지급할 수량을 확인해주세요.");
-        if (!confirm(`${user.nickname}님에게 ${tokenAmount} 토큰을 지급하시겠습니까?\n사유: ${reason}`)) return;
+        if (!selectedUserId || tokenAmount <= 0) return;
         try {
-            await axios.post('/api/admin/tokens/manual', {
-                userId: user.id, amount: tokenAmount, reason: reason
-            }, getAuthHeader());
-            alert("지급 완료!");
-            const newBalance = user.tokenBalance + tokenAmount;
-            setUser({ ...user, tokenBalance: newBalance });
-            setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, tokenBalance: newBalance } : u));
+            await giveManualToken(selectedUserId, tokenAmount, tokenReason);
+            alert("토큰이 성공적으로 지급되었습니다. ✨");
+            setIsTokenModalOpen(false);
+            setTokenAmount(0);
+            setTokenReason('');
             void fetchData();
-        } catch {
-            alert("지급 실패");
-        }
-    };
-
-    const handleToggleSuspension = async (targetUser: UserInfo) => {
-        const action = targetUser.isSuspended ? "해제" : "정지";
-        if (!confirm(`정말로 ${targetUser.nickname}님을 ${action}하시겠습니까?`)) return;
-        try {
-            await axios.patch(`/api/admin/users/${targetUser.id}/status`, {}, getAuthHeader());
-            alert(`성공적으로 ${action}되었습니다.`);
-            if (user && user.id === targetUser.id) {
-                setUser({ ...user, isSuspended: !targetUser.isSuspended });
-            }
-            setAllUsers(prev => prev.map(u => u.id === targetUser.id ? { ...u, isSuspended: !u.isSuspended } : u));
-        } catch {
-            alert("상태 변경 실패");
+        } catch (err) {
+            alert("토큰 지급에 실패했습니다.");
         }
     };
 
     return (
         <div style={s.container}>
             <header style={s.header}>
-                <h1 style={s.title}>👥 통합 유저 관리</h1>
-                <p style={s.meta}>유저 검색, 정지 처리 및 토큰 지급을 통합 관리합니다. ✨</p>
+                <div>
+                    <h1 style={s.title}>사용자 거버넌스</h1>
+                    <p style={s.subtitle}>이그에그 커뮤니티의 모든 구성원을 관리하고 소통하세요. 👥</p>
+                </div>
+                <div style={s.tabGroup}>
+                    <button 
+                        onClick={() => setActiveTab('users')} 
+                        style={{...s.tab, backgroundColor: activeTab === 'users' ? '#0F172A' : '#F1F5F9', color: activeTab === 'users' ? '#FFF' : '#64748B'}}
+                    >
+                        전체 유저
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('tokens')} 
+                        style={{...s.tab, backgroundColor: activeTab === 'tokens' ? '#0F172A' : '#F1F5F9', color: activeTab === 'tokens' ? '#FFF' : '#64748B'}}
+                    >
+                        토큰 지급 내역
+                    </button>
+                </div>
             </header>
 
-            {/* 🔍 토큰 지급용 상세 검색 */}
-            <div style={s.searchCard}>
-                <div style={s.searchFlex}>
-                    <input
-                        type="text"
-                        placeholder="닉네임으로 유저 상세 검색 (토큰 지급/정지용)"
-                        style={s.searchInput}
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
-                    />
-                    <button onClick={() => void handleSearch()} style={s.searchBtn}>검색</button>
-                </div>
-
-                {/* 유저 상세 정보 (검색 시 나타남) */}
-                {user && (
-                    <div style={s.userDetail}>
-                        <div style={s.divider} />
-                        <div style={s.userHeader}>
-                            <div style={s.userBasic}>
-                                <h2 style={s.nickname}>{user.nickname}</h2>
-                                <span style={s.emailSpan}>{user.email}</span>
-                                <p style={{marginTop: '5px', fontSize: '14px', color: '#4C1D95', fontWeight: 700}}>
-                                    현재 보유량: 🪙 {user.tokenBalance.toLocaleString()} 토큰
-                                </p>
-                            </div>
-                            <div style={s.badgeGroup}>
-                                <span style={{ ...s.statusBadge, backgroundColor: user.isSuspended ? '#EF4444' : '#10B981' }}>
-                                    {user.isSuspended ? "정지됨" : "정상"}
-                                </span>
-                                <button onClick={() => void handleToggleSuspension(user)} style={{ ...s.suspendBtn, backgroundColor: user.isSuspended ? '#6366F1' : '#F43F5E' }}>
-                                    {user.isSuspended ? "🔓 정지 해제" : "🚫 계정 정지"}
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div style={s.actionSection}>
-                            <h3 style={s.sectionSubTitle}>💰 수동 토큰 지급</h3>
-                            <div style={s.tokenForm}>
-                                <input type="number" style={s.input} value={tokenAmount} onChange={(e) => setTokenAmount(Number(e.target.value))} />
-                                <select style={s.input} value={reason} onChange={(e) => setReason(e.target.value)}>
-                                    <option>결제 오류 보상</option>
-                                    <option>이벤트 당첨</option>
-                                    <option>시스템 장애 보상</option>
-                                    <option>기타</option>
-                                </select>
-                                <button onClick={() => void handleGiveToken()} style={s.inlineSubmitBtn}>지급하기</button>
-                            </div>
-                        </div>
+            {activeTab === 'users' ? (
+                <>
+                    {/* 🔍 검색 바 */}
+                    <div style={s.searchBar}>
+                        <input 
+                            style={s.searchInput} 
+                            placeholder="닉네임 또는 이메일로 검색..." 
+                            value={searchKeyword}
+                            onChange={(e) => setSearchKeyword(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
+                        />
+                        <button style={s.searchBtn} onClick={() => void handleSearch()}>유저 조회</button>
                     </div>
-                )}
-            </div>
 
-            {/* 🛡️ 필터 바 */}
-            <div style={s.filterWrapper}>
-                <div style={s.filterBar}>
-                    {(['ALL', 'USER', 'ADMIN', 'SUSPENDED'] as const).map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            style={{
-                                ...s.filterBtn,
-                                backgroundColor: filter === f ? '#7C3AED' : 'rgba(255,255,255,0.5)',
-                                color: filter === f ? '#fff' : '#6B7280',
-                                border: filter === f ? '1px solid #7C3AED' : '1px solid rgba(229, 231, 235, 0.5)',
-                            }}
-                        >
-                            {f === 'ALL' ? '전체' : f === 'USER' ? '일반' : f === 'ADMIN' ? '관리자' : '정지'}
-                        </button>
-                    ))}
-                </div>
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                    <span style={{fontSize: '13px', color: '#6B7280'}}>결과 내 검색:</span>
-                    <input
-                        type="text"
-                        placeholder="닉네임/이메일..."
-                        style={s.filterInput}
-                        value={filterSearchTerm}
-                        onChange={(e) => setFilterSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            {/* 📋 유저 목록 테이블 */}
-            <div style={s.logSection}>
-                <h3 style={s.sectionSubTitle}>📋 유저 목록 ({filteredUsers.length}명)</h3>
+                    <div style={s.tableCard}>
+                        <table style={s.table}>
+                            <thead>
+                                <tr style={s.thRow}>
+                                    <th style={s.th}>가입일</th>
+                                    <th style={s.th}>닉네임</th>
+                                    <th style={s.th}>이메일</th>
+                                    <th style={{...s.th, textAlign: 'center'}}>토큰 잔액</th>
+                                    <th style={{...s.th, textAlign: 'center'}}>상태</th>
+                                    <th style={{...s.th, textAlign: 'right'}}>제어</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan={6} style={{ ...s.emptyTd, padding: '60px 0' }}> ⏳ 유저 정보를 불러오는 중입니다...</td></tr>
+                                ) : users.length > 0 ? (
+                                    users.map((u) => (
+                                        <tr key={u.id} style={s.tr}>
+                                            <td style={s.td}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                                            <td style={{...s.td, fontWeight: 700, color: '#1E293B'}}>{u.nickname}</td>
+                                            <td style={s.td}>{u.email}</td>
+                                            <td style={{...s.td, textAlign: 'center', fontWeight: 800, color: '#6366F1'}}>🪙 {(u.tokenBalance || 0).toLocaleString()}</td>
+                                            <td style={{...s.td, textAlign: 'center'}}>
+                                                <span style={{
+                                                    ...s.statusBadge,
+                                                    backgroundColor: u.isActive ? '#ECFDF5' : '#FEF2F2',
+                                                    color: u.isActive ? '#10B981' : '#F43F5E'
+                                                }}>
+                                                    {u.isActive ? '재직중' : '활동정지'}
+                                                </span>
+                                            </td>
+                                            <td style={{...s.td, textAlign: 'right'}}>
+                                                <div style={s.actionGroup}>
+                                                    <button 
+                                                        onClick={() => { setSelectedUserId(u.id); setIsTokenModalOpen(true); }}
+                                                        style={s.tokenBtn}
+                                                    >
+                                                        보상 지급
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => void handleToggleStatus(u.id)}
+                                                        style={{...s.statusBtn, border: u.isActive ? '1px solid #FCA5A5' : '1px solid #10B981', color: u.isActive ? '#F43F5E' : '#10B981'}}
+                                                    >
+                                                        {u.isActive ? '정지' : '해제'}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={6} style={{ padding: '80px 0', textAlign: 'center', background: 'linear-gradient(to bottom, #FFF, #F8FAFC)' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                                                <div style={{ width: '56px', height: '56px', backgroundColor: '#F1F5F9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <span style={{ fontSize: '24px' }}>👥</span>
+                                                </div>
+                                                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1E293B', margin: 0 }}>등록된 사용자가 없습니다.</h3>
+                                                <p style={{ fontSize: '13px', color: '#94A3B8', margin: 0 }}>이곳에서 회원들의 상태와 보상을 한눈에 관리할 수 있습니다.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            ) : (
                 <div style={s.tableCard}>
                     <table style={s.table}>
                         <thead>
-                            <tr style={s.tr}>
-                                <th style={s.th}>가입일</th>
-                                <th style={s.th}>닉네임</th>
-                                <th style={s.th}>이메일</th>
-                                <th style={{...s.th, textAlign: 'center'}}>토큰 잔액</th>
-                                <th style={s.th}>상태</th>
-                                <th style={{...s.th, textAlign: 'center'}}>관리</th>
+                            <tr style={s.thRow}>
+                                <th style={s.th}>지급 시간</th>
+                                <th style={s.th}>대상 유저</th>
+                                <th style={{...s.th, textAlign: 'center'}}>지급량</th>
+                                <th style={s.th}>지급 사유</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {loading ? (
-                                <tr><td colSpan={6} style={s.emptyTd}>데이터 로드 중...</td></tr>
-                            ) : filteredUsers.length > 0 ? filteredUsers.map(u => (
-                                <tr key={u.id} style={s.tr}>
-                                    <td style={s.td}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                                    <td style={{...s.td, fontWeight: 700}}>{u.nickname}</td>
-                                    <td style={s.td}>{u.email}</td>
-                                    <td style={{...s.td, color: '#4C1D95', fontWeight: 700, textAlign: 'center'}}>🪙 {u.tokenBalance.toLocaleString()}</td>
-                                    <td style={s.td}>
-                                        <span style={{ color: u.isSuspended ? '#EF4444' : '#10B981', fontWeight: 800 }}>
-                                            {u.isSuspended ? '정지' : '정상'}
-                                        </span>
-                                    </td>
-                                    <td style={s.td}>
-                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                                            <button
-                                                onClick={() => {
-                                                    setSearchKeyword(u.nickname);
-                                                    void handleSearch(u.nickname);
-                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                }}
-                                                style={{...s.tableActionBtn, backgroundColor: '#7C3AED'}}
-                                            >
-                                                지급
-                                            </button>
-                                            <button onClick={() => void handleToggleSuspension(u)} style={{ ...s.tableActionBtn, backgroundColor: u.isSuspended ? '#10B981' : '#EF4444' }}>
-                                                {u.isSuspended ? '해제' : '정지'}
-                                            </button>
+                            {tokenLogs.length > 0 ? (
+                                tokenLogs.map((log) => (
+                                    <tr key={log.id} style={s.tr}>
+                                        <td style={s.td}>{new Date(log.createdAt).toLocaleString()}</td>
+                                        <td style={{...s.td, fontWeight: 700}}>{log.nickname}</td>
+                                        <td style={{...s.td, textAlign: 'center', fontWeight: 800, color: '#6366F1'}}>+ {log.amount.toLocaleString()} 🪙</td>
+                                        <td style={s.td}>{log.reason}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} style={{ padding: '60px 0', textAlign: 'center', background: 'linear-gradient(to bottom, #FFF, #F9FAFB)' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ width: '48px', height: '48px', backgroundColor: '#ECFDF5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <span style={{ fontSize: '20px' }}>🪙</span>
+                                            </div>
+                                            <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B', margin: 0 }}>토큰 지급 기록이 없습니다.</h3>
+                                            <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>활동 중인 회원들에게 보상 차원의 토큰을 지급할 수 있습니다.</p>
                                         </div>
                                     </td>
                                 </tr>
-                            )) : (
-                                <tr><td colSpan={6} style={s.emptyTd}>검색 결과가 없습니다.</td></tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-            </div>
+            )}
 
-            {/* 📝 토큰 지급 이력 */}
-            <div style={{...s.logSection, marginTop: '50px'}}>
-                <h3 style={s.sectionSubTitle}>📝 최근 토큰 상세 이력</h3>
-                <div style={s.tableCard}>
-                    <table style={s.table}>
-                        <thead>
-                            <tr style={s.tr}>
-                                <th style={s.th}>일시</th>
-                                <th style={s.th}>대상 유저</th>
-                                <th style={s.th}>변동 수량</th>
-                                <th style={s.th}>상세 사유</th>
-                                <th style={s.th}>처리자</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {logs.length > 0 ? logs.map(log => {
-                                const isSignup = log.reason?.includes('가입');
-                                const isPurchase = log.type === 'purchase' || log.reason?.includes('구매');
-                                const targetNick = log.user?.nickname || "알 수 없음";
-                                const adminNick = log.admin?.nickname || (log.type === 'MANUAL' ? '관리자' : '🤖 시스템');
+            {/* 🪙 토큰 지급 모달 */}
+            {isTokenModalOpen && (
+                <div style={s.modalOverlay}>
+                    <div style={s.modal}>
+                        <h2 style={s.modalTitle}>토큰 보상 지급</h2>
+                        <p style={s.modalSubtitle}>사용자에게 특별한 보상을 선물하세요.</p>
+                        
+                        <div style={s.inputField}>
+                            <label style={s.label}>지급 수량</label>
+                            <input 
+                                type="number" 
+                                style={s.modalInput} 
+                                value={tokenAmount} 
+                                onChange={(e) => setTokenAmount(Number(e.target.value))}
+                            />
+                        </div>
+                        
+                        <div style={s.inputField}>
+                            <label style={s.label}>지급 사유</label>
+                            <input 
+                                style={s.modalInput} 
+                                placeholder="예: 커뮤니티 활동 우수 보상" 
+                                value={tokenReason} 
+                                onChange={(e) => setTokenReason(e.target.value)}
+                            />
+                        </div>
 
-                                return (
-                                    <tr key={log.id} style={s.tr}>
-                                        <td style={s.td}>{log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}</td>
-                                        <td style={{...s.td, fontWeight: 600}}>{targetNick}</td>
-                                        <td style={{
-                                            ...s.td,
-                                            color: isSignup ? '#10B981' : isPurchase ? '#3B82F6' : '#6366F1',
-                                            fontWeight: 800
-                                        }}>
-                                            +{log.amount.toLocaleString()}
-                                        </td>
-                                        <td style={s.td}>
-                                            <span style={{
-                                                padding: '4px 10px',
-                                                borderRadius: '8px',
-                                                fontSize: '11px',
-                                                fontWeight: 800,
-                                                backgroundColor: isSignup ? '#D1FAE5' : isPurchase ? '#DBEAFE' : '#EEF2FF',
-                                                color: isSignup ? '#065F46' : isPurchase ? '#1E40AF' : '#3730A3',
-                                            }}>
-                                                {log.reason}
-                                            </span>
-                                        </td>
-                                        <td style={s.td}>
-                                            <span style={{color: !log.admin ? '#9CA3AF' : '#374151', fontSize: '12px', fontWeight: 600}}>
-                                                {adminNick}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            }) : (
-                                <tr><td colSpan={5} style={s.emptyTd}>표시할 이력이 없습니다.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                        <div style={s.modalActions}>
+                            <button onClick={() => void handleGiveToken()} style={s.confirmBtn}>지급 확정</button>
+                            <button onClick={() => setIsTokenModalOpen(false)} style={s.cancelBtn}>취소</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
 
-// 🌌 스타일 디자인 (Glassmorphism 적용)
 const s: Record<string, React.CSSProperties> = {
-    container: { padding: '40px 10px', maxWidth: '1200px', margin: '0 auto' },
-    header: { marginBottom: '35px' },
-    title: { fontSize: '28px', fontWeight: 900, color: '#4C1D95' },
-    meta: { color: '#7C3AED', fontSize: '15px', fontWeight: 600, opacity: 0.8 },
-
-    searchCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '30px',
-        padding: '30px',
-        boxShadow: '0 8px 32px rgba(139, 92, 246, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.5)',
-        marginBottom: '40px'
-    },
-    searchFlex: { display: 'flex', gap: '15px' },
-    searchInput: { 
-        flex: 1, padding: '15px 25px', borderRadius: '18px', 
-        border: '1px solid rgba(124, 58, 237, 0.2)', outline: 'none', 
-        fontSize: '15px', backgroundColor: 'rgba(255,255,255,0.5)',
-        transition: 'all 0.2s'
-    },
-    searchBtn: { 
-        padding: '0 35px', borderRadius: '18px', border: 'none', 
-        background: '#7C3AED', color: '#fff', fontWeight: 800, 
-        cursor: 'pointer', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)',
-        transition: 'transform 0.2s'
-    },
-
-    userDetail: { marginTop: '25px' },
-    userHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-    userBasic: { display: 'flex', flexDirection: 'column', gap: '4px' },
-    nickname: { fontSize: '22px', fontWeight: 900, color: '#1F2937', margin: 0 },
-    emailSpan: { fontSize: '15px', color: '#9CA3AF' },
-    badgeGroup: { display: 'flex', gap: '10px' },
-    statusBadge: { padding: '6px 14px', borderRadius: '10px', color: '#fff', fontSize: '12px', fontWeight: 800 },
-    suspendBtn: { padding: '8px 18px', borderRadius: '12px', border: 'none', color: '#fff', fontWeight: 800, fontSize: '12px', cursor: 'pointer' },
+    container: { padding: '20px 0' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' },
+    title: { fontSize: '28px', fontWeight: 900, color: '#0F172A', margin: 0 },
+    subtitle: { fontSize: '15px', color: '#64748B', fontWeight: 500, marginTop: '4px' },
     
-    divider: { height: '1px', backgroundColor: 'rgba(229, 231, 235, 0.5)', margin: '20px 0' },
+    tabGroup: { display: 'flex', gap: '8px', backgroundColor: '#F1F5F9', padding: '6px', borderRadius: '14px' },
+    tab: { border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: '0.2s' },
 
-    actionSection: { backgroundColor: 'rgba(124, 58, 237, 0.03)', padding: '20px', borderRadius: '20px' },
-    sectionSubTitle: { fontSize: '18px', fontWeight: 800, color: '#1F2937', marginBottom: '15px' },
-    tokenForm: { display: 'flex', gap: '15px' },
-    input: { padding: '12px 15px', borderRadius: '12px', border: '1px solid rgba(209, 213, 219, 0.5)', fontSize: '14px', outline: 'none' },
-    inlineSubmitBtn: { padding: '0 25px', background: '#7C3AED', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' },
+    searchBar: { display: 'flex', gap: '12px', marginBottom: '30px' },
+    searchInput: { flex: 1, padding: '16px 24px', borderRadius: '18px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '15px', fontWeight: 500, backgroundColor: '#FFF' },
+    searchBtn: { backgroundColor: '#6366F1', color: '#FFF', border: 'none', padding: '0 30px', borderRadius: '18px', fontWeight: 800, cursor: 'pointer' },
 
-    filterWrapper: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '20px' },
-    filterBar: { display: 'flex', gap: '8px' },
-    filterBtn: { padding: '8px 18px', borderRadius: '14px', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s', fontWeight: 700 },
-    filterInput: { 
-        padding: '10px 20px', borderRadius: '14px', border: '1px solid rgba(229, 231, 235, 0.8)', 
-        fontSize: '14px', width: '250px', outline: 'none', backgroundColor: 'rgba(255,255,255,0.5)'
-    },
+    tableCard: { backgroundColor: '#FFF', borderRadius: '30px', overflow: 'hidden', border: '1px solid #F1F5F9', boxShadow: '0 4px 30px rgba(0,0,0,0.02)' },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    thRow: { backgroundColor: '#FAFCFE', borderBottom: '1px solid #F1F5F9' },
+    th: { padding: '20px 25px', textAlign: 'left', fontSize: '11px', fontWeight: 900, color: '#94A3B8', letterSpacing: '1px' },
+    td: { padding: '20px 25px', fontSize: '14px', color: '#64748B', borderBottom: '1px solid #F8FAFC' },
+    tr: { transition: '0.2s' },
 
-    logSection: { marginTop: '10px' },
-    tableCard: { 
-        backgroundColor: 'rgba(255, 255, 255, 0.6)', 
-        backdropFilter: 'blur(10px)',
-        borderRadius: '25px', 
-        overflow: 'hidden', 
-        border: '1px solid rgba(255, 255, 255, 0.5)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
-    },
-    table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
-    th: { backgroundColor: 'rgba(249, 250, 251, 0.5)', padding: '18px', textAlign: 'left', color: '#6B7280', fontWeight: 800, borderBottom: '1px solid rgba(229, 231, 235, 0.5)' },
-    td: { padding: '18px', borderBottom: '1px solid rgba(243, 244, 246, 0.5)', color: '#374151', verticalAlign: 'middle' },
-    tr: { transition: 'background 0.2s' },
-    tableActionBtn: { padding: '6px 14px', borderRadius: '10px', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer', minWidth: '45px' },
-    emptyTd: { textAlign: 'center', padding: '100px', color: '#9CA3AF', fontSize: '16px', fontWeight: 600 }
+    statusBadge: { padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800 },
+    actionGroup: { display: 'flex', gap: '8px', justifyContent: 'flex-end' },
+    tokenBtn: { backgroundColor: '#F1F5F9', color: '#6366F1', border: 'none', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' },
+    statusBtn: { backgroundColor: 'transparent', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' },
+
+    modalOverlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+    modal: { backgroundColor: '#FFF', width: '400px', padding: '40px', borderRadius: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' },
+    modalTitle: { fontSize: '24px', fontWeight: 900, color: '#0F172A', margin: '0 0 10px 0' },
+    modalSubtitle: { fontSize: '14px', color: '#64748B', marginBottom: '30px' },
+    inputField: { marginBottom: '20px' },
+    label: { display: 'block', fontSize: '12px', fontWeight: 800, color: '#94A3B8', marginBottom: '8px' },
+    modalInput: { width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none' },
+    modalActions: { display: 'flex', gap: '12px', marginTop: '40px' },
+    confirmBtn: { flex: 1, backgroundColor: '#6366F1', color: '#FFF', border: 'none', padding: '15px', borderRadius: '14px', fontWeight: 800, cursor: 'pointer' },
+    cancelBtn: { flex: 1, backgroundColor: '#F1F5F9', color: '#64748B', border: 'none', padding: '15px', borderRadius: '14px', fontWeight: 800, cursor: 'pointer' },
+
+    emptyTd: { padding: '100px', textAlign: 'center', color: '#94A3B8', fontWeight: 600 }
 };
 
 export default UserManagement;

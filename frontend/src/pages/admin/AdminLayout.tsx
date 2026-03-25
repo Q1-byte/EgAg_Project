@@ -1,16 +1,15 @@
-import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 /**
- * 전용 관리자 레이아웃 컴포넌트
- * 사이드바와 메인 콘텐츠 영역의 전체 구조를 정의합니다.
+ * 🎨 Slick Admin Layout
+ * - Balanced whitespace, unified container, and high-end feel.
  */
 const AdminLayout = () => {
     const { isAuthenticated, role } = useAuthStore();
 
-    // 관리자 권한 체크 (방어적 로직)
+    // 🛡️ 권한 체크 (ADMIN 또는 100)
     const isAdmin = role === 'ADMIN' || String(role) === '100';
 
     if (!isAuthenticated || !isAdmin) {
@@ -19,13 +18,12 @@ const AdminLayout = () => {
 
     return (
         <div style={s.layout}>
-            {/* 1. 고정 사이드바 (Nav 전 전담) */}
+            {/* 📁 사이드바 고정 */}
             <AdminSidebar />
-
-            {/* 2. 메인 콘텐츠 영역 (스크롤 가능) */}
-            <main style={s.mainContent}>
-                <div style={s.container}>
-                    {/* 하위 라우트 컴포넌트들이 렌더링되는 지점 */}
+            
+            {/* 🚀 콘텐츠 영역 */}
+            <main style={s.main}>
+                <div style={s.innerContainer}>
                     <Outlet />
                 </div>
             </main>
@@ -33,31 +31,24 @@ const AdminLayout = () => {
     );
 };
 
-// 🌌 스타일 디자인 (Premium Admin Frame)
 const s: Record<string, React.CSSProperties> = {
-    layout: { 
-        display: 'flex', 
-        minHeight: '100vh', 
-        backgroundColor: '#F8FAFC',
-        backgroundImage: `
-            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.03) 0px, transparent 50%),
-            radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.03) 0px, transparent 50%)
-        `,
-    },
-    mainContent: {
-        flex: 1,
-        marginLeft: '260px', // 사이드바 너비
-        minHeight: '100vh',
+    layout: {
         display: 'flex',
-        flexDirection: 'column',
+        minHeight: '100vh',
+        backgroundColor: '#F8FAFC', // Very light slate for premium clarity
+        fontFamily: "'Inter', 'Pretendard', -apple-system, sans-serif"
     },
-    container: {
+    main: {
         flex: 1,
-        padding: '0 20px 40px', // 좌우 20px, 하단 40px 여백
-        maxWidth: '1200px',
-        width: '100%',
+        marginLeft: '240px', // 사이드바 너비와 동일
+        width: 'calc(100% - 240px)',
+        padding: '20px',
+        boxSizing: 'border-box'
+    },
+    innerContainer: {
+        maxWidth: '1280px',
         margin: '0 auto',
-        boxSizing: 'border-box' as const,
+        padding: '20px'
     }
 };
 

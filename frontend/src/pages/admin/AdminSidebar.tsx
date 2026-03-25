@@ -3,41 +3,41 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 /**
- * 관리자 전용 사이드바 컴포넌트
+ * 💎 Slick Admin Sidebar
+ * - Minimalist, high-density, professional aesthetic
  */
 const AdminSidebar = () => {
     const location = useLocation();
     const { logout, nickname } = useAuthStore();
 
     const menuItems = [
-        { path: '/admin/dashboard', name: '대시보드', icon: '📈' },
-        { path: '/admin/users', name: '통합 유저 관리', icon: '👥' },
-        { path: '/admin/payments', name: '결제 내역', icon: '💳' },
-        { path: '/admin/images', name: '메인 이미지 관리', icon: '🖼️' },
-        { path: '/admin/inquiries', name: '문의게시판', icon: '📬' },
-        { path: '/admin/artworks', name: '신고 작품 관리', icon: '🚫' },
+        { name: '오버뷰', path: '/admin/dashboard', icon: '📊' },
+        { name: '유저 관리', path: '/admin/users', icon: '👥' },
+        { name: '배너 관리', path: '/admin/images', icon: '🖼️' },
+        { name: '문의 관리', path: '/admin/inquiries', icon: '💬' },
+        { name: '작품 신고', path: '/admin/artworks', icon: '🛡️' },
+        { name: '결제 내역', path: '/admin/payments', icon: '💰' },
     ];
+
+    const handleLogout = () => {
+        logout();
+    };
 
     return (
         <aside style={s.sidebar}>
-            <Link to="/" style={s.logoWrapper}>
-                <img
-                    src="/Egag_logo-removebg.png"
-                    alt="이그에그 로고"
-                    style={s.logoImg}
-                />
-                <p style={s.subLogo}>ADMIN PANEL</p>
-            </Link>
-
-            <div style={s.userInfo}>
-                <div style={s.avatar}>{nickname?.charAt(0) || 'A'}</div>
-                <div style={s.userText}>
-                    <p style={s.userNickname}>{nickname}</p>
-                    <p style={s.userRole}>System Admin</p>
-                </div>
+            <div style={s.topSection}>
+                <Link to="/" style={s.logoWrapper}>
+                    <img
+                        src="/Egag_logo-removebg.png"
+                        alt="Egag"
+                        style={s.logoImg}
+                    />
+                    <div style={s.badge}>SYSTEM v2.0</div>
+                </Link>
             </div>
 
             <nav style={s.nav}>
+                <p style={s.navLabel}>MAIN MENU</p>
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
@@ -46,37 +46,40 @@ const AdminSidebar = () => {
                             to={item.path}
                             style={{
                                 ...s.navLink,
-                                backgroundColor: isActive ? 'rgba(124, 58, 237, 0.1)' : 'transparent',
-                                color: isActive ? '#7C3AED' : '#6B7280',
-                                fontWeight: isActive ? 800 : 500,
+                                backgroundColor: isActive ? '#F5F3FF' : 'transparent',
+                                color: isActive ? '#6366F1' : '#94A3B8',
                             }}
                         >
-                            <span style={s.iconWrapper}>{item.icon}</span>
-                            {item.name}
+                            <span style={{...s.iconWrapper, color: isActive ? '#FFF' : '#6366F1'}}>{item.icon}</span>
+                            <span style={{ fontWeight: isActive ? 700 : 500 }}>{item.name}</span>
                         </Link>
                     );
                 })}
             </nav>
 
-            <div style={s.footer}>
-                <Link to="/" style={s.homeBtn}>
-                    🏠 사용자 홈으로
-                </Link>
-                <button onClick={logout} style={s.logoutBtn}>
-                    🚪 로그아웃
-                </button>
+            <div style={s.bottomSection}>
+            <div style={s.userInfo}>
+                <div style={s.avatar}>{nickname?.charAt(0) || 'A'}</div>
+                <div style={s.userText}>
+                    <div style={s.userRole}>최고 관리자</div>
+                    <div style={s.userNickname}>{nickname || '관리자'}</div>
+                </div>
+            </div>
+                <div style={s.actionGroup}>
+                    <Link to="/" style={s.miniBtn}>🏠</Link>
+                    <button onClick={handleLogout} style={s.logoutBtn}>
+                        <span style={s.logoutIcon}>🚪</span> 로그아웃
+                    </button>
+                </div>
             </div>
         </aside>
     );
 };
 
-// 🌌 스타일 정의 (유리 질감 및 프리미엄 디자인)
 const s: Record<string, React.CSSProperties> = {
     sidebar: {
-        width: '260px',
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        backdropFilter: 'blur(15px)',
-        borderRight: '1px solid rgba(229, 231, 235, 0.5)',
+        width: '240px',
+        backgroundColor: '#FFFFFF', 
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
@@ -84,123 +87,53 @@ const s: Record<string, React.CSSProperties> = {
         left: 0,
         height: '100vh',
         zIndex: 100,
-        boxShadow: '4px 0 20px rgba(0, 0, 0, 0.02)'
+        boxShadow: '4px 0 20px rgba(0, 0, 0, 0.02)',
+        borderRight: '1px solid #F1F5F9',
+        color: '#1E293B'
     },
-    logoWrapper: {
-        padding: '40px 20px 20px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textDecoration: 'none',
+    topSection: { padding: '40px 25px 30px' },
+    logoWrapper: { textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+    logoImg: { width: '90px', height: 'auto', marginBottom: '12px' },
+    badge: { 
+        fontSize: '10px', fontWeight: 900, color: '#6366F1', 
+        backgroundColor: '#EEF2FF', padding: '2px 8px', 
+        borderRadius: '6px', letterSpacing: '1px' 
     },
-    logoImg: {
-        width: '110px',
-        height: 'auto',
-        marginBottom: '8px',
-        display: 'block'
-    },
-    subLogo: {
-        fontSize: '10px',
-        color: '#7C3AED',
-        fontWeight: 800,
-        letterSpacing: '2px',
-        textTransform: 'uppercase',
-        margin: 0,
-        opacity: 0.8
-    },
-    userInfo: {
-        padding: '20px',
-        margin: '0 15px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        backgroundColor: 'rgba(124, 58, 237, 0.05)',
-        borderRadius: '20px',
-    },
-    avatar: {
-        width: '40px',
-        height: '40px',
-        borderRadius: '12px',
-        backgroundColor: '#7C3AED',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 800,
-        fontSize: '18px'
-    },
-    userText: {
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    userNickname: {
-        margin: 0,
-        fontSize: '14px',
-        fontWeight: 700,
-        color: '#1F2937'
-    },
-    userRole: {
-        margin: 0,
-        fontSize: '11px',
-        color: '#9CA3AF',
-        fontWeight: 600
-    },
-    nav: {
-        flex: 1,
-        padding: '0 15px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px'
-    },
+
+    nav: { flex: 1, padding: '0 15px' },
+    navLabel: { fontSize: '11px', fontWeight: 900, color: '#CBD5E1', margin: '0 0 15px 10px', letterSpacing: '1px' },
     navLink: {
-        display: 'flex',
-        alignItems: 'center',
-        padding: '14px 18px',
-        borderRadius: '16px',
-        textDecoration: 'none',
-        fontSize: '15px',
-        transition: 'all 0.2s ease',
-        boxSizing: 'border-box'
+        display: 'flex', alignItems: 'center', padding: '12px 15px',
+        borderRadius: '12px', textDecoration: 'none', fontSize: '14px',
+        marginBottom: '4px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        gap: '12px'
     },
-    iconWrapper: {
-        marginRight: '14px',
-        fontSize: '20px',
-        display: 'inline-flex',
-        width: '24px',
-        justifyContent: 'center'
+    iconWrapper: { fontSize: '18px', width: '24px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+
+    bottomSection: { padding: '20px', borderTop: '1px solid #F1F5F9' },
+    userInfo: { 
+        display: 'flex', alignItems: 'center', gap: '10px', 
+        marginBottom: '15px', padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '14px' 
     },
-    footer: {
-        padding: '24px',
-        borderTop: '1px solid rgba(243, 244, 246, 0.8)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        marginBottom: '10px'
+    avatar: { 
+        width: '32px', height: '32px', borderRadius: '8px', 
+        backgroundColor: '#6366F1', color: '#FFF', display: 'flex', 
+        alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' 
     },
-    homeBtn: {
-        display: 'block',
-        textAlign: 'center',
-        padding: '14px',
-        borderRadius: '14px',
-        backgroundColor: '#F3F4F6',
-        color: '#4B5563',
-        textDecoration: 'none',
-        fontSize: '14px',
-        fontWeight: 700,
-        transition: '0.2s',
-        border: '1px solid #E5E7EB'
+    userText: { display: 'flex', flexDirection: 'column' },
+    userNickname: { margin: 0, fontSize: '13px', fontWeight: 700, color: '#1E293B' },
+    userRole: { margin: 0, fontSize: '10px', color: '#94A3B8', fontWeight: 600 },
+
+    actionGroup: { display: 'flex', gap: '8px' },
+    miniBtn: { 
+        padding: '8px', borderRadius: '10px', backgroundColor: '#F1F5F9', 
+        border: 'none', cursor: 'pointer', textDecoration: 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'center' 
     },
-    logoutBtn: {
-        width: '100%',
-        padding: '14px',
-        borderRadius: '14px',
-        border: '1px solid #FEE2E2',
-        color: '#EF4444',
-        backgroundColor: 'rgba(254, 226, 226, 0.1)',
-        fontWeight: 700,
-        cursor: 'pointer',
-        transition: 'all 0.2s'
+    logoutBtn: { 
+        flex: 1, padding: '8px', borderRadius: '10px', border: '1px solid #E2E8F0',
+        backgroundColor: 'transparent', color: '#94A3B8', fontSize: '11px', 
+        fontWeight: 800, cursor: 'pointer', transition: '0.2s' 
     }
 };
 
