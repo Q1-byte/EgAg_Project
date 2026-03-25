@@ -23,6 +23,40 @@ export interface WeeklyStat {
 }
 
 /**
+ * 🎨 메인 배너 이미지 응답 타입
+ */
+export interface MainBannerResponse {
+    slotNumber: number;
+    artworkId: string;
+    artworkTitle: string;
+    imageUrl: string;
+}
+
+/**
+ * 🖼️ 어드민용 작품 응답 타입
+ */
+export interface AdminArtworkResponse {
+    id: string;
+    title: string;
+    imageUrl: string;
+    nickname: string;
+    createdAt: string;
+    isVisible: boolean;
+}
+
+/**
+ * 💬 문의 내역 응답 타입
+ */
+export interface AdminInquiryResponse {
+    id: string;
+    title: string;
+    content: string;
+    status: string;
+    createdAt: string;
+    userNickname: string;
+}
+
+/**
  * 📊 대시보드 통계 실시간 데이터 조회
  */
 export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => {
@@ -35,7 +69,7 @@ export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => 
  */
 export const getAdminWeeklyStats = async (): Promise<WeeklyStat[]> => {
     const res = await client.get('/admin/stats/artwork-by-date');
-    return res.data.map((item: any) => ({
+    return res.data.map((item: { count: number }) => ({
         ...item,
         value: item.count
     }));
@@ -84,7 +118,7 @@ export const giveManualToken = async (userId: string, amount: number, reason: st
 /**
  * 🎨 메인 배너 이미지 정보 조회
  */
-export const getAdminMainImages = async () => {
+export const getAdminMainImages = async (): Promise<MainBannerResponse[]> => {
     const res = await client.get('/admin/main-images');
     return res.data;
 };
@@ -146,7 +180,7 @@ export const getAdminPayments = async (page = 0, size = 10, keyword = '') => {
 /**
  * 🎨 전체 작품 목록 조회 (어드민 라이브러리용)
  */
-export const getArtworks = async (page = 0, size = 20) => {
+export const getArtworks = async (page = 0, size = 20): Promise<{ content: AdminArtworkResponse[], totalElements: number }> => {
     const res = await client.get('/admin/artwork-all-list', {
         params: { page, size }
     });
