@@ -26,9 +26,9 @@ jobs:
 
       - name: Build
         working-directory: frontend
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
-        run: npm run build
+        run: |
+          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env.production
+          npm run build
 
       - name: Deploy to S3
         uses: aws-actions/configure-aws-credentials@v4
