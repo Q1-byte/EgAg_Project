@@ -8,7 +8,6 @@ import { updateArtworkTitle } from '../api/artwork'
 import type { UserProfile, ArtworkSummary } from '../api/user'
 import type { UserResponse } from '../types'
 import { Camera, Pencil, Globe, Lock, Download, Trash2, Ticket, ArrowRight, Eye, X, Pin } from 'lucide-react'
-import { resolveImageUrl } from '../utils/imageUrl'
 
 type Tab = 'profile' | 'gallery'
 

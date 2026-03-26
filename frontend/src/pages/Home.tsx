@@ -1,5 +1,4 @@
 import { useNavigate, Link } from 'react-router-dom'
-import { resolveImageUrl } from '../utils/imageUrl'
 import { consumeToken } from '../api/canvas'
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
