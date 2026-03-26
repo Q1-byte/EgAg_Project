@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 import Header from '../components/Header'
+import { resolveImageUrl } from '../utils/imageUrl'
 import { getMyProfile, updateMyProfile, changePassword, getMyArtworks, uploadProfilePhoto, toggleArtworkVisibility, deleteArtwork, getFollowers, getFollowing } from '../api/user'
 import { updateArtworkTitle } from '../api/artwork'
 import type { UserProfile, ArtworkSummary } from '../api/user'
 import type { UserResponse } from '../types'
-import { Camera, Pencil, Globe, Lock, Download, Trash2, Ticket, ArrowRight, Eye, X } from 'lucide-react'
+import { Camera, Pencil, Globe, Lock, Download, Trash2, Ticket, ArrowRight, Eye, X, Pin } from 'lucide-react'
 import { resolveImageUrl } from '../utils/imageUrl'
 
 type Tab = 'profile' | 'gallery'
@@ -28,6 +29,26 @@ export default function MyPage() {
   const [followModal, setFollowModal] = useState<'followers' | 'following' | null>(null)
   const [followList, setFollowList] = useState<UserResponse[]>([])
   const [followListLoading, setFollowListLoading] = useState(false)
+  const [galleryPage, setGalleryPage] = useState(1)
+  const GALLERY_PAGE_SIZE = 6
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('pinnedArtworkIds') || '[]') } catch { return [] }
+  })
+
+  const handlePin = (id: string) => {
+    setPinnedIds(prev => {
+      const next = prev.includes(id)
+        ? prev.filter(p => p !== id)
+        : [id, ...prev]
+      localStorage.setItem('pinnedArtworkIds', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const sortedArtworks = [
+    ...pinnedIds.map(id => artworks.find(a => a.id === id)).filter(Boolean) as typeof artworks,
+    ...artworks.filter(a => !pinnedIds.includes(a.id)),
+  ]
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return }
@@ -112,6 +133,8 @@ export default function MyPage() {
       <Header />
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes galleryIn { from{opacity:0;transform:translateY(10px) scale(0.985);filter:blur(6px)} to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)} }
+        .gallery-grid-wrap { animation: galleryIn 0.35s cubic-bezier(0.22,1,0.36,1) both; }
         .mp-tab:hover { color: #6B82A0 !important; }
         .mp-avatar-wrap:hover .mp-avatar-overlay { opacity: 1 !important; }
         .mp-gallery-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(107,130,160,0.18) !important; }
@@ -123,9 +146,14 @@ export default function MyPage() {
           .mp-stat-row { padding: 12px 16px !important; }
           .mp-btn-row { flex-direction: column !important; }
           .mp-follow-modal { padding: 24px 0 16px !important; }
+          .mp-gallery-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+        }
+        @media (max-width: 380px) {
+          .mp-gallery-grid { grid-template-columns: 1fr !important; }
         }
         @media (min-width: 641px) and (max-width: 860px) {
           .mp-card { padding: 32px 28px !important; }
+          .mp-gallery-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
 
@@ -140,7 +168,7 @@ export default function MyPage() {
           ] as { key: Tab; label: string }[]).map(t => (
             <button key={t.key} className="mp-tab"
               style={{ ...s.tabBtn, ...(tab === t.key ? s.tabBtnActive : {}) }}
-              onClick={() => setTab(t.key)}
+              onClick={() => { setTab(t.key); setGalleryPage(1) }}
             >
               {t.label}
             </button>
@@ -264,8 +292,9 @@ export default function MyPage() {
                   <h2 style={s.galleryTitle}>내 작품</h2>
                   <span style={s.galleryCount}>{artworks.length}개</span>
                 </div>
-                <div style={s.galleryGrid}>
-                  {artworks.map((art, i) => (
+
+                <div key={galleryPage} className="gallery-grid-wrap mp-gallery-grid" style={s.galleryGrid}>
+                  {sortedArtworks.slice((galleryPage - 1) * GALLERY_PAGE_SIZE, galleryPage * GALLERY_PAGE_SIZE).map((art, i) => (
                     <div key={art.id} className="mp-gallery-card" style={{ ...s.galleryCard, animation: `fadeUp ${0.3 + i * 0.04}s ease both` }}>
                       {/* 이미지 영역 */}
                       <div style={s.galleryImgRow} onClick={() => {
@@ -323,11 +352,68 @@ export default function MyPage() {
                             title="삭제">
                             <Trash2 size={13} />
                           </button>
+                          <button
+                            style={{ ...s.galleryBtn, color: pinnedIds.includes(art.id) ? '#f59e0b' : '#c4b5d0' }}
+                            onClick={() => handlePin(art.id)}
+                            title={pinnedIds.includes(art.id) ? '고정 해제' : '대표 작품으로 고정'}>
+                            <Pin size={13} fill={pinnedIds.includes(art.id) ? '#f59e0b' : 'none'} />
+                          </button>
                         </div>
                       </div>
                     </div>
                   ))}
+                  {/* 빈 슬롯 - 그리드 높이 고정 */}
+                  {Array.from({ length: GALLERY_PAGE_SIZE - sortedArtworks.slice((galleryPage - 1) * GALLERY_PAGE_SIZE, galleryPage * GALLERY_PAGE_SIZE).length }, (_, i) => (
+                    <div key={`ph-${i}`} style={{ ...s.galleryCard, visibility: 'hidden', pointerEvents: 'none', minHeight: 280 }} />
+                  ))}
                 </div>
+
+                {/* 페이지네이션 */}
+                {artworks.length > GALLERY_PAGE_SIZE && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 28 }}>
+                    <button
+                      onClick={() => setGalleryPage(p => Math.max(1, p - 1))}
+                      disabled={galleryPage === 1}
+                      style={{
+                        width: 36, height: 36, borderRadius: 10, border: '1.5px solid #e9d5ff',
+                        background: galleryPage === 1 ? '#f5f3ff' : 'white',
+                        color: galleryPage === 1 ? '#c4b5d0' : '#7c3aed',
+                        cursor: galleryPage === 1 ? 'default' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 16, fontWeight: 700, transition: 'all 0.15s',
+                      }}
+                    >‹</button>
+
+                    {Array.from({ length: Math.ceil(artworks.length / GALLERY_PAGE_SIZE) }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setGalleryPage(page)}
+                        style={{
+                          width: 36, height: 36, borderRadius: 10,
+                          border: page === galleryPage ? 'none' : '1.5px solid #e9d5ff',
+                          background: page === galleryPage ? 'linear-gradient(135deg, #7c3aed, #c47a8a)' : 'white',
+                          color: page === galleryPage ? 'white' : '#7c3aed',
+                          cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                          transition: 'all 0.15s',
+                          boxShadow: page === galleryPage ? '0 4px 12px rgba(124,58,237,0.25)' : 'none',
+                        }}
+                      >{page}</button>
+                    ))}
+
+                    <button
+                      onClick={() => setGalleryPage(p => Math.min(Math.ceil(artworks.length / GALLERY_PAGE_SIZE), p + 1))}
+                      disabled={galleryPage === Math.ceil(artworks.length / GALLERY_PAGE_SIZE)}
+                      style={{
+                        width: 36, height: 36, borderRadius: 10, border: '1.5px solid #e9d5ff',
+                        background: galleryPage === Math.ceil(artworks.length / GALLERY_PAGE_SIZE) ? '#f5f3ff' : 'white',
+                        color: galleryPage === Math.ceil(artworks.length / GALLERY_PAGE_SIZE) ? '#c4b5d0' : '#7c3aed',
+                        cursor: galleryPage === Math.ceil(artworks.length / GALLERY_PAGE_SIZE) ? 'default' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 16, fontWeight: 700, transition: 'all 0.15s',
+                      }}
+                    >›</button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -556,7 +642,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'rgba(107,130,160,0.1)', borderRadius: 6, padding: '2px 8px',
   },
   galleryGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 18,
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '1fr', gap: 18,
     width: '100%',
   },
   galleryCard: {
