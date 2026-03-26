@@ -179,15 +179,13 @@ export default function Home() {
     if (!isAuthenticated) return
     const noShowUntil = localStorage.getItem(getAttendDismissKey(userId ?? 'guest'))
     const isDismissed = noShowUntil && Date.now() < Number(noShowUntil)
-    if (isDismissed) return
     getTodayAttendance()
       .then(({ attended }) => {
         setHasAttendedToday(attended)
-        if (!attended) setShowAttendanceModal(true)
+        if (!attended && !isDismissed) setShowAttendanceModal(true)
       })
       .catch(() => {
-        // API 실패해도 dismiss 아니면 모달 오픈
-        setShowAttendanceModal(true)
+        if (!isDismissed) setShowAttendanceModal(true)
       })
   }, [isAuthenticated])
 
