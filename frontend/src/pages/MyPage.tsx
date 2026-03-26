@@ -7,6 +7,7 @@ import { updateArtworkTitle } from '../api/artwork'
 import type { UserProfile, ArtworkSummary } from '../api/user'
 import type { UserResponse } from '../types'
 import { Camera, Pencil, Globe, Lock, Download, Trash2, Ticket, ArrowRight, Eye, X } from 'lucide-react'
+import { resolveImageUrl } from '../utils/imageUrl'
 
 type Tab = 'profile' | 'gallery'
 
@@ -104,9 +105,7 @@ export default function MyPage() {
     finally { setFollowListLoading(false) }
   }
 
-  const avatarSrc = profile?.profileImageUrl
-    ? (profile.profileImageUrl.startsWith('/uploads') ? `http://localhost:8080${profile.profileImageUrl}` : profile.profileImageUrl)
-    : null
+  const avatarSrc = profile?.profileImageUrl ? resolveImageUrl(profile.profileImageUrl) : null
 
   return (
     <div style={s.bg} className="mp-bg">
@@ -286,7 +285,7 @@ export default function MyPage() {
                         <div style={s.galleryImgWrap}>
                           <p style={s.galleryImgLabel}>AI 그림</p>
                           {art.imageUrl
-                            ? <img src={art.imageUrl} alt="AI 그림" style={s.galleryImg} />
+                            ? <img src={resolveImageUrl(art.imageUrl)} alt="AI 그림" style={s.galleryImg} />
                             : <div style={s.galleryImgPlaceholder}><Eye size={24} color="#c4b5d0" /></div>
                           }
                         </div>
@@ -352,9 +351,7 @@ export default function MyPage() {
             ) : (
               <div style={{ maxHeight: 420, overflowY: 'auto', width: '100%' }}>
                 {followList.map(u => {
-                  const uAvatar = u.profileImageUrl
-                    ? (u.profileImageUrl.startsWith('/uploads') ? `http://localhost:8080${u.profileImageUrl}` : u.profileImageUrl)
-                    : null
+                  const uAvatar = u.profileImageUrl ? resolveImageUrl(u.profileImageUrl) : null
                   return (
                     <div key={u.id}
                       onClick={() => { setFollowModal(null); navigate(`/user/${u.id}`) }}

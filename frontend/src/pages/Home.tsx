@@ -8,6 +8,7 @@ import { exploreArtworks } from '../api/artwork'
 import type { ArtworkResponse } from '../types'
 import AttendanceModal, { getAttendDismissKey } from '../components/AttendanceModal'
 import { getTodayAttendance } from '../api/user'
+import { resolveImageUrl } from '../utils/imageUrl'
 
 function ArtworkCarousel() {
   const navigate = useNavigate()
@@ -88,7 +89,7 @@ function ArtworkCarousel() {
                 }}
               >
                 <img
-                  src={item.imageUrl}
+                  src={resolveImageUrl(item.imageUrl)}
                   alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
                 />
