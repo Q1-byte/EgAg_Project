@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/useAuthStore'
 import Header from '../components/Header'
 import { getPackages, requestBankTransfer, kakaoPayReady, tossPayConfirm } from '../api/payment'
 import type { Package } from '../api/payment'
+import PaymentQrModal from '../components/PaymentQrModal'
 
 declare global {
   interface Window { IMP: any }
@@ -101,6 +102,7 @@ export default function TokenShop() {
   const widgetsRef = useRef<any>(null)
   const tossOrderRef = useRef<string>('')
   const [activeIndex, setActiveIndex] = useState(1)
+  const [qrModal, setQrModal] = useState<{ type: 'kakaopay' | 'tosspay'; url: string; orderId: string; amount: number } | null>(null)
 
   const goTo = (i: number, pkgList = packages) => {
     const len = pkgList.length
@@ -153,56 +155,19 @@ export default function TokenShop() {
 
     if (payMethod === 'kakaopay') {
       try {
-        const { redirectUrl } = await kakaoPayReady(selectedPkg.id)
-        window.location.href = redirectUrl
+        const { redirectUrl, orderId } = await kakaoPayReady(selectedPkg.id)
+        setQrModal({ type: 'kakaopay', url: redirectUrl, orderId, amount: selectedPkg.price })
       } catch {
         setError('카카오페이 결제 준비 중 오류가 발생했습니다.')
-        setLoading(false)
-      }
-      return
-    }
-    if (payMethod === 'tosspay') {
-      try {
-        const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY)
-        const customerKey = (nickname || 'user').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50)
-        const payment = tossPayments.payment({ customerKey })
-        const orderId = `egag_${selectedPkg.id.toLowerCase()}_${Date.now()}`
-        sessionStorage.setItem('toss_package_id', selectedPkg.id)
-        await payment.requestPayment({
-          method: 'CARD',
-          amount: { currency: 'KRW', value: selectedPkg.price },
-          orderId,
-          orderName: `${selectedPkg.displayName} (토큰 ${selectedPkg.tokenAmount}개)`,
-          successUrl: `${window.location.origin}/token-shop?status=toss_success`,
-          failUrl: `${window.location.origin}/token-shop?status=fail`,
-          card: { flowMode: 'DIRECT', easyPay: 'TOSSPAY' },
-        })
-      } catch (err: any) {
-        sessionStorage.removeItem('toss_package_id')
-        setError(err?.message || '토스페이 결제 중 오류가 발생했습니다.')
       }
       setLoading(false)
       return
     }
-    if (payMethod === 'card') {
-      try {
-        const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY)
-        const customerKey = (nickname || 'user').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50)
-        const payment = tossPayments.payment({ customerKey })
-        const orderId = `egag_${selectedPkg.id.toLowerCase()}_${Date.now()}`
-        sessionStorage.setItem('toss_package_id', selectedPkg.id)
-        await payment.requestPayment({
-          method: 'CARD',
-          amount: { currency: 'KRW', value: selectedPkg.price },
-          orderId,
-          orderName: `${selectedPkg.displayName} (토큰 ${selectedPkg.tokenAmount}개)`,
-          successUrl: `${window.location.origin}/token-shop?status=toss_success`,
-          failUrl: `${window.location.origin}/token-shop?status=fail`,
-        })
-      } catch (err: any) {
-        sessionStorage.removeItem('toss_package_id')
-        setError(err?.message || '카드 결제 중 오류가 발생했습니다.')
-      }
+    if (payMethod === 'tosspay' || payMethod === 'card') {
+      const orderId = `egag_${selectedPkg.id.toLowerCase()}_${Date.now()}`
+      const orderName = `${selectedPkg.displayName} (토큰 ${selectedPkg.tokenAmount}개)`
+      const tossUrl = `${window.location.origin}/toss-pay?orderId=${encodeURIComponent(orderId)}&amount=${selectedPkg.price}&orderName=${encodeURIComponent(orderName)}&packageId=${selectedPkg.id}&successBase=${encodeURIComponent(window.location.origin)}`
+      setQrModal({ type: 'tosspay', url: tossUrl, orderId, amount: selectedPkg.price })
       setLoading(false)
       return
     }
@@ -629,6 +594,20 @@ export default function TokenShop() {
         </div>
 
       </main>
+      {qrModal && (
+        <PaymentQrModal
+          type={qrModal.type}
+          url={qrModal.url}
+          orderId={qrModal.orderId}
+          amount={qrModal.amount}
+          onSuccess={(tokens, newBalance) => {
+            setQrModal(null)
+            setSuccessMsg(`토큰 ${tokens}개가 충전되었습니다!`)
+            setTokenBalance(newBalance)
+          }}
+          onClose={() => setQrModal(null)}
+        />
+      )}
     </div>
   )
 }

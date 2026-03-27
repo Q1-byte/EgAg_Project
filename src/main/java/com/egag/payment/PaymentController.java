@@ -7,7 +7,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-
 import java.util.List;
 import java.util.Map;
 
@@ -54,6 +53,11 @@ public class PaymentController {
             @RequestBody TossPaymentConfirmRequest request) {
         return ResponseEntity.ok(
             paymentService.tossPayConfirm(userDetails.getUsername(), request));
+    }
+
+    @GetMapping("/status/{orderId}")
+    public ResponseEntity<Map<String, String>> getPaymentStatus(@PathVariable String orderId) {
+        return ResponseEntity.ok(paymentService.getPaymentStatus(orderId));
     }
 
     @GetMapping("/kakaopay/approve")

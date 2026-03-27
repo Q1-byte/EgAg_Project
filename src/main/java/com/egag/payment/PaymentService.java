@@ -54,6 +54,12 @@ public class PaymentService {
         "shinhan",new String[]{"신한은행",    "110-123-456789"}
     );
 
+    public Map<String, String> getPaymentStatus(String orderId) {
+        return paymentRepository.findByMerchantUid(orderId)
+                .map(p -> Map.of("status", p.getStatus(), "tokens", String.valueOf(p.getTokenAmount())))
+                .orElse(Map.of("status", "not_found"));
+    }
+
     public List<PackageDto> getPackages() {
         return List.of(
             new PackageDto(PackageInfo.BASIC.getId(),    PackageInfo.BASIC.getDisplayName(),    PackageInfo.BASIC.getTokenAmount(),    PackageInfo.BASIC.getPrice(),    false, false),
@@ -191,7 +197,7 @@ public class PaymentService {
                 .build();
             paymentRepository.save(payment);
 
-            return Map.of("redirectUrl", redirectUrl);
+            return Map.of("redirectUrl", redirectUrl, "orderId", merchantUid);
         } catch (HttpClientErrorException e) {
             throw new RuntimeException("카카오페이 결제 준비 실패: " + e.getResponseBodyAsString());
         }

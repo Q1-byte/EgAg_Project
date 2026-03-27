@@ -17,6 +17,7 @@ import OAuthCallback from './pages/OAuthCallback'
 import KakaoOnboarding from './pages/KakaoOnboarding'
 import Policy from './pages/Policy'
 import TokenShop from './pages/TokenShop'
+import TossPayPage from './pages/TossPayPage'
 import MyPage from './pages/MyPage'
 import TimeAttack from './pages/TimeAttack'
 import NotFound from './pages/NotFound'
@@ -107,6 +108,7 @@ function App() {
                 <Route path="/payment/success" element={<div>Payment Success</div>} />
                 <Route path="/payment/fail" element={<div>Payment Fail</div>} />
                 <Route path="/token-shop" element={<TokenShop />} />
+                <Route path="/toss-pay" element={<TossPayPage />} />
                 <Route path="/mypage" element={<MyPage />} />
 
                 {/* --- 🛡️ 어드민 영역 (중첩 라우팅) --- */}

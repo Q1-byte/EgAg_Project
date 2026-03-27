@@ -35,7 +35,10 @@ export const requestBankTransfer = (data: {
 }) => client.post<PaymentResponse>('/payments/bank-transfer', data).then(res => res.data)
 
 export const kakaoPayReady = (packageId: string) =>
-  client.post<{ redirectUrl: string }>('/payments/kakaopay/ready', { packageId }).then(res => res.data)
+  client.post<{ redirectUrl: string; orderId: string }>('/payments/kakaopay/ready', { packageId }).then(res => res.data)
+
+export const getPaymentStatus = (orderId: string) =>
+  client.get<{ status: string; tokens?: string }>(`/payments/status/${orderId}`).then(res => res.data)
 
 export const tossPayConfirm = (data: {
   paymentKey: string
