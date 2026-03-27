@@ -70,7 +70,7 @@ public class KakaoAuthService {
             params.add("client_secret", clientSecret);
         }
 
-        log.info("[KAKAO TOKEN] client_id={}, redirect_uri={}, code={}", clientId, redirectUri, code);
+        log.info("[KAKAO TOKEN] client_id={}, redirect_uri={}, code={}, client_secret_set={}", clientId, redirectUri, code, (clientSecret != null && !clientSecret.isBlank()));
 
         try {
             ResponseEntity<Map> response = restTemplate.postForEntity(
