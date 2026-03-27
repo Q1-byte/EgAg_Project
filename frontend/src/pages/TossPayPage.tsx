@@ -19,29 +19,18 @@ export default function TossPayPage() {
     sessionStorage.setItem('toss_package_id', packageId)
 
     loadTossPayments(TOSS_CLIENT_KEY).then(tossPayments => {
-      const customerKey = 'guest_qr'
-      const payment = tossPayments.payment({ customerKey })
-      payment.requestPayment({
+      const payment = tossPayments.payment({ customerKey: `toss_${orderId}` })
+      return payment.requestPayment({
         method: 'CARD',
         amount: { currency: 'KRW', value: amount },
         orderId,
         orderName,
         successUrl: `${successBase}/token-shop?status=toss_success`,
         failUrl: `${successBase}/token-shop?status=fail`,
-      }).catch(() => {
-        window.close()
+        card: { flowMode: 'DIRECT', easyPay: 'TOSSPAY' },
       })
-    })
+    }).catch(() => {})
   }, [])
 
-  return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', background: '#f8f5ff',
-      flexDirection: 'column', gap: 16,
-    }}>
-      <div style={{ fontSize: 32 }}>💳</div>
-      <p style={{ color: '#555', fontSize: 15 }}>토스 결제창을 불러오는 중...</p>
-    </div>
-  )
+  return null
 }
