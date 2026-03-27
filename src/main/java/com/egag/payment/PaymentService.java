@@ -183,6 +183,7 @@ public class PaymentService {
 
             String tid = (String) response.getBody().get("tid");
             String redirectUrl = (String) response.getBody().get("next_redirect_pc_url");
+            String mobileUrl = (String) response.getBody().get("next_redirect_mobile_url");
 
             Payment payment = Payment.builder()
                 .id(UUID.randomUUID().toString())
@@ -197,7 +198,7 @@ public class PaymentService {
                 .build();
             paymentRepository.save(payment);
 
-            return Map.of("redirectUrl", redirectUrl, "orderId", merchantUid);
+            return Map.of("redirectUrl", redirectUrl, "mobileUrl", mobileUrl != null ? mobileUrl : redirectUrl, "orderId", merchantUid);
         } catch (HttpClientErrorException e) {
             throw new RuntimeException("카카오페이 결제 준비 실패: " + e.getResponseBodyAsString());
         }

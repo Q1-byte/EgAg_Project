@@ -155,8 +155,8 @@ export default function TokenShop() {
 
     if (payMethod === 'kakaopay') {
       try {
-        const { redirectUrl, orderId } = await kakaoPayReady(selectedPkg.id)
-        setQrModal({ type: 'kakaopay', url: redirectUrl, orderId, amount: selectedPkg.price })
+        const { mobileUrl, orderId } = await kakaoPayReady(selectedPkg.id)
+        setQrModal({ type: 'kakaopay', url: mobileUrl, orderId, amount: selectedPkg.price })
       } catch {
         setError('카카오페이 결제 준비 중 오류가 발생했습니다.')
       }
