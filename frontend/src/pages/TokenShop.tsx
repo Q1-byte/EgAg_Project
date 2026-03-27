@@ -10,7 +10,7 @@ declare global {
   interface Window { IMP: any }
 }
 
-const TOSS_WIDGET_KEY = (import.meta as any).env?.VITE_TOSS_WIDGET_KEY || ''
+const TOSS_WIDGET_KEY: string = (import.meta as any).env?.VITE_TOSS_WIDGET_KEY ?? ''
 
 type PayMethod = 'kakaopay' | 'tosspay' | 'card' | 'bank'
 
