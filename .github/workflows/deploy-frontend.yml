@@ -27,6 +27,7 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
+          VITE_TOSS_CLIENT_KEY: ${{ secrets.VITE_TOSS_CLIENT_KEY }}
           VITE_TOSS_WIDGET_KEY: ${{ secrets.VITE_TOSS_WIDGET_KEY }}
           VITE_PORTONE_CODE: ${{ secrets.VITE_PORTONE_CODE }}
         run: npm run build

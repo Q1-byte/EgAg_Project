@@ -10,6 +10,7 @@ declare global {
   interface Window { IMP: any }
 }
 
+const TOSS_CLIENT_KEY: string = (import.meta as any).env?.VITE_TOSS_CLIENT_KEY ?? ''
 const TOSS_WIDGET_KEY: string = (import.meta as any).env?.VITE_TOSS_WIDGET_KEY ?? ''
 
 type PayMethod = 'kakaopay' | 'tosspay' | 'card' | 'bank'
@@ -160,9 +161,49 @@ export default function TokenShop() {
       }
       return
     }
-    if (payMethod === 'tosspay' || payMethod === 'card') {
+    if (payMethod === 'tosspay') {
+      try {
+        const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY)
+        const customerKey = (nickname || 'user').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50)
+        const payment = tossPayments.payment({ customerKey })
+        const orderId = `egag_${selectedPkg.id.toLowerCase()}_${Date.now()}`
+        sessionStorage.setItem('toss_package_id', selectedPkg.id)
+        await payment.requestPayment({
+          method: 'CARD',
+          amount: { currency: 'KRW', value: selectedPkg.price },
+          orderId,
+          orderName: `${selectedPkg.displayName} (토큰 ${selectedPkg.tokenAmount}개)`,
+          successUrl: `${window.location.origin}/token-shop?status=toss_success`,
+          failUrl: `${window.location.origin}/token-shop?status=fail`,
+          card: { flowMode: 'DIRECT', easyPay: 'TOSSPAY' },
+        })
+      } catch (err: any) {
+        sessionStorage.removeItem('toss_package_id')
+        setError(err?.message || '토스페이 결제 중 오류가 발생했습니다.')
+      }
       setLoading(false)
-      openTossModal()
+      return
+    }
+    if (payMethod === 'card') {
+      try {
+        const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY)
+        const customerKey = (nickname || 'user').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50)
+        const payment = tossPayments.payment({ customerKey })
+        const orderId = `egag_${selectedPkg.id.toLowerCase()}_${Date.now()}`
+        sessionStorage.setItem('toss_package_id', selectedPkg.id)
+        await payment.requestPayment({
+          method: 'CARD',
+          amount: { currency: 'KRW', value: selectedPkg.price },
+          orderId,
+          orderName: `${selectedPkg.displayName} (토큰 ${selectedPkg.tokenAmount}개)`,
+          successUrl: `${window.location.origin}/token-shop?status=toss_success`,
+          failUrl: `${window.location.origin}/token-shop?status=fail`,
+        })
+      } catch (err: any) {
+        sessionStorage.removeItem('toss_package_id')
+        setError(err?.message || '카드 결제 중 오류가 발생했습니다.')
+      }
+      setLoading(false)
       return
     }
     if (payMethod === 'bank') {
