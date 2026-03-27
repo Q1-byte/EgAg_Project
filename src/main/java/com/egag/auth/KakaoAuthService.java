@@ -64,6 +64,8 @@ public class KakaoAuthService {
         params.add("redirect_uri", redirectUri);
         params.add("code", code);
 
+        log.info("[KAKAO TOKEN] client_id={}, redirect_uri={}, code={}", clientId, redirectUri, code);
+
         ResponseEntity<Map> response = restTemplate.postForEntity(
                 "https://kauth.kakao.com/oauth/token",
                 new HttpEntity<>(params, headers),
