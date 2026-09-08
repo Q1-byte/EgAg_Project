@@ -179,9 +179,10 @@ public class ImageTransformService {
                     .retrieve()
                     .body(String.class);
 
-            System.out.println("[DALLE] url response received");
+            System.out.println("[DALLE] b64 response received");
             JsonNode node = objectMapper.readTree(response);
-            return node.path("data").get(0).path("url").asText();
+            String b64 = node.path("data").get(0).path("b64_json").asText();
+            return "data:image/png;base64," + b64;
         } catch (Exception e) {
             System.out.println("[DALLE] error: " + e.getMessage());
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "DALLE_ERROR",
