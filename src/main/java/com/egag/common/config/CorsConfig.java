@@ -18,6 +18,7 @@ public class CorsConfig {
             "http://localhost:5173",
             "http://43.203.93.46",
             "https://egag.qones.site",
+            "https://qones.site",
             "http://egag-frontend-390445053104-ap-northeast-2-an.s3-website.ap-northeast-2.amazonaws.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
