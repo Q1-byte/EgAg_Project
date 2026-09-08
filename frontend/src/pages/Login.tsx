@@ -436,7 +436,7 @@ export default function Login() {
           <div style={s.dividerLine} />
         </div>
 
-        <button style={s.btnKakao} onClick={() => window.location.href = '/api/auth/kakao'}>
+        <button style={s.btnKakao} onClick={() => window.location.href = `${(import.meta.env.VITE_API_URL || '/api').replace('/api', '')}/api/auth/kakao`}>
           <svg width="20" height="20" viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
             <path fill="#3C1E1E" d="M10 2C5.582 2 2 4.91 2 8.5c0 2.29 1.522 4.3 3.816 5.435l-.973 3.56a.25.25 0 0 0 .378.277L9.64 15.19A9.5 9.5 0 0 0 10 15.2c4.418 0 8-2.91 8-6.5S14.418 2 10 2z"/>
           </svg>
