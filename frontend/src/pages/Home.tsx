@@ -8,7 +8,7 @@ import { exploreArtworks } from '../api/artwork'
 import { getAdminMainImages } from '../api/adminApi'
 import type { ArtworkResponse } from '../types'
 import AttendanceModal, { getAttendDismissKey } from '../components/AttendanceModal'
-import { getTodayAttendance } from '../api/user'
+import { getTodayAttendance } from '../api/attendance'
 import { resolveImageUrl } from '../utils/imageUrl'
 
 function useCarouselSize() {
