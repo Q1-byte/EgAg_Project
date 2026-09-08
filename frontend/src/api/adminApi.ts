@@ -67,17 +67,6 @@ export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => 
 };
 
 /**
- * 📈 주간 아트워크 생성 통계 (대시보드 차트용)
- */
-export const getAdminWeeklyStats = async (): Promise<WeeklyStat[]> => {
-    const res = await client.get('/admin/stats/artwork-by-date');
-    return res.data.map((item: { count: number }) => ({
-        ...item,
-        value: item.count
-    }));
-};
-
-/**
  * 👥 날짜별 신규 가입자 수 (사용자 증가 추이 차트)
  */
 export const getAdminUserByDate = async (): Promise<WeeklyStat[]> => {
