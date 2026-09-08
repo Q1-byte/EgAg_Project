@@ -16,18 +16,6 @@ export interface UserProfile {
   createdAt: string
 }
 
-export interface ArtworkSummary {
-  id: string
-  title: string | null
-  topic: string | null
-  imageUrl: string | null
-  userImageData: string | null
-  status: string
-  isPublic: boolean
-  likeCount: number
-  createdAt: string
-}
-
 export const getUserProfile = async (id: string): Promise<UserResponse> => {
   const response = await client.get<UserResponse>(`/users/${id}`)
   return response.data
@@ -88,12 +76,6 @@ export const changePassword = (data: { currentPassword: string; newPassword: str
 
 export const completeOnboarding = (data: { name: string; phone: string; nickname: string; email?: string }) =>
   client.post<UserProfile>('/users/me/onboarding', data).then(res => res.data)
-
-export const getMyArtworks = () =>
-  client.get<ArtworkSummary[]>('/gallery/my').then(res => res.data)
-
-export const saveArtworkToGallery = (imageUrl: string, userImageData: string, title: string, source: string) =>
-  client.post<ArtworkSummary>('/artworks', { imageUrl, userImageData, title, source }).then(res => res.data)
 
 export const checkNicknameAvailable = async (nickname: string): Promise<boolean> => {
   const response = await client.get('/users/check-nickname', { params: { nickname } })
