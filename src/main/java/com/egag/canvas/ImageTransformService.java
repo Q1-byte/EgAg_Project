@@ -170,8 +170,7 @@ public class ImageTransformService {
                     "prompt", prompt,
                     "n", 1,
                     "size", "1024x1024",
-                    "quality", "standard",
-                    "response_format", "b64_json"
+                    "quality", "standard"
             ));
 
             String response = restClient.post()
@@ -180,10 +179,9 @@ public class ImageTransformService {
                     .retrieve()
                     .body(String.class);
 
-            System.out.println("[DALLE] b64_json response received");
+            System.out.println("[DALLE] url response received");
             JsonNode node = objectMapper.readTree(response);
-            String b64 = node.path("data").get(0).path("b64_json").asText();
-            return "data:image/png;base64," + b64;
+            return node.path("data").get(0).path("url").asText();
         } catch (Exception e) {
             System.out.println("[DALLE] error: " + e.getMessage());
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "DALLE_ERROR",
