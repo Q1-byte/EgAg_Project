@@ -63,7 +63,7 @@ export default function Notifications() {
   }
 
   const avatarSrc = (url?: string | null) =>
-    url ? (url.startsWith('/uploads') ? `http://localhost:8080${url}` : url) : null
+    url ? (url.startsWith('/uploads') ? `${(import.meta.env.VITE_API_URL || '/api').replace('/api', '')}${url}` : url) : null
 
   return (
     <div style={s.bg} className="notif-bg">

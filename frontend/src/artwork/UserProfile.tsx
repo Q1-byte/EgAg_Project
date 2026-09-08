@@ -80,7 +80,7 @@ const UserProfile = () => {
   }
 
   const avatarSrc = user?.profileImageUrl
-    ? (user.profileImageUrl.startsWith('/uploads') ? `http://localhost:8080${user.profileImageUrl}` : user.profileImageUrl)
+    ? (user.profileImageUrl.startsWith('/uploads') ? `${(import.meta.env.VITE_API_URL || '/api').replace('/api', '')}${user.profileImageUrl}` : user.profileImageUrl)
     : null
 
   if (loading) return (
@@ -228,7 +228,7 @@ const UserProfile = () => {
               <div style={{ maxHeight: 420, overflowY: 'auto', paddingBottom: 12 }}>
                 {followList.map(u => {
                   const uAvatar = u.profileImageUrl
-                    ? (u.profileImageUrl.startsWith('/uploads') ? `http://localhost:8080${u.profileImageUrl}` : u.profileImageUrl)
+                    ? (u.profileImageUrl.startsWith('/uploads') ? `${(import.meta.env.VITE_API_URL || '/api').replace('/api', '')}${u.profileImageUrl}` : u.profileImageUrl)
                     : null
                   return (
                     <div key={u.id}

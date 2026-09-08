@@ -157,7 +157,7 @@ export default function EditProfile() {
                 <div style={s.avatarCircle}><span style={{ fontSize: 28 }}>⏳</span></div>
               ) : profileImageUrl ? (
                 <img
-                  src={profileImageUrl.startsWith('/uploads') ? `http://localhost:8080${profileImageUrl}` : profileImageUrl}
+                  src={profileImageUrl.startsWith('/uploads') ? `${(import.meta.env.VITE_API_URL || '/api').replace('/api', '')}${profileImageUrl}` : profileImageUrl}
                   alt="프로필"
                   style={{ ...s.avatarCircle, objectFit: 'cover' as const }}
                 />
