@@ -25,6 +25,9 @@ export const deleteArtwork = async (id: string): Promise<void> => {
   await client.delete(`/artworks/${id}`)
 }
 
+export const toggleArtworkVisibility = (id: string): Promise<{ isPublic: boolean }> =>
+  client.patch<{ isPublic: boolean }>(`/artworks/${id}/visibility`).then(res => res.data)
+
 export const reportArtwork = async (id: string, data: { reason: string, description?: string }): Promise<void> => {
   await client.post(`/artworks/${id}/report`, data)
 }

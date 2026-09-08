@@ -95,12 +95,6 @@ export const getMyArtworks = () =>
 export const saveArtworkToGallery = (imageUrl: string, userImageData: string, title: string, source: string) =>
   client.post<ArtworkSummary>('/artworks', { imageUrl, userImageData, title, source }).then(res => res.data)
 
-export const toggleArtworkVisibility = (id: string) =>
-  client.patch<ArtworkSummary>(`/artworks/${id}/visibility`).then(res => res.data)
-
-export const deleteArtwork = (id: string) =>
-  client.delete(`/artworks/${id}`)
-
 export const checkNicknameAvailable = async (nickname: string): Promise<boolean> => {
   const response = await client.get('/users/check-nickname', { params: { nickname } })
   return response.data.available
