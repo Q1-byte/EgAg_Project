@@ -4,6 +4,7 @@ import com.egag.common.exception.CustomException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,6 +14,7 @@ import org.springframework.web.client.RestClient;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ImageTransformService {
@@ -62,12 +64,11 @@ public class ImageTransformService {
     }
 
     public TransformResponse transform(String canvasBase64, String style, String subject, String reason) {
-        // subject가 없으면 새로 식별, 있으면 재사용
         String resolvedSubject = (subject != null && !subject.isBlank()) ? subject : identifySubject(canvasBase64).get("subject");
-        System.out.println("[DEBUG] subject: " + resolvedSubject);
+        log.debug("[Transform] subject: {}", resolvedSubject);
 
         String description = describeSketch(canvasBase64, resolvedSubject, reason);
-        System.out.println("[DEBUG] description: " + description);
+        log.debug("[Transform] description: {}", description);
 
         String stylePrompt = STYLE_PROMPTS.getOrDefault(style, STYLE_PROMPTS.get("watercolor"));
         String prompt = String.format(
@@ -77,7 +78,7 @@ public class ImageTransformService {
 
         String imageUrl = generateImage(prompt);
         String story = storyTeller.generateStory(resolvedSubject, description);
-        System.out.println("[STORY] " + story);
+        log.debug("[Transform] story generated");
 
         return TransformResponse.builder()
                 .imageUrl(imageUrl)
@@ -147,11 +148,10 @@ public class ImageTransformService {
 
             JsonNode node = objectMapper.readTree(response);
             String result = node.path("choices").get(0).path("message").path("content").asText();
-            System.out.println("[VISION] prompt: " + userPrompt.strip());
-            System.out.println("[VISION] response: " + result);
+            log.debug("[Vision] response received");
             return result;
         } catch (Exception e) {
-            System.out.println("[VISION] error: " + e.getMessage());
+            log.error("[Vision] error: {}", e.getMessage());
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "VISION_ERROR",
                     "이미지 분석 실패: " + e.getMessage());
         }
@@ -179,12 +179,12 @@ public class ImageTransformService {
                     .retrieve()
                     .body(String.class);
 
-            System.out.println("[DALLE] b64 response received");
+            log.debug("[Image] b64 response received");
             JsonNode node = objectMapper.readTree(response);
             String b64 = node.path("data").get(0).path("b64_json").asText();
             return "data:image/png;base64," + b64;
         } catch (Exception e) {
-            System.out.println("[DALLE] error: " + e.getMessage());
+            log.error("[Image] generation error: {}", e.getMessage());
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "DALLE_ERROR",
                     "이미지 생성 실패: " + e.getMessage());
         }

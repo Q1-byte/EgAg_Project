@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Stage, Layer, Line, Rect, Image as KonvaImage } from 'react-konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { identifyCanvas, transformCanvas } from '../api/canvas'
-import { saveArtworkToGallery } from '../api/user'
+import { saveArtworkToGallery } from '../api/artwork'
 import { useAuthStore } from '../stores/useAuthStore'
 
 const COLORS = [

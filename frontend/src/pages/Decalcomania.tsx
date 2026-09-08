@@ -4,7 +4,7 @@ import { Stage, Layer, Line, Rect, Image as KonvaImage, Group } from 'react-konv
 import type Konva from 'konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { startSession, identifyCanvas, transformCanvas } from '../api/canvas'
-import { saveArtworkToGallery } from '../api/user'
+import { saveArtworkToGallery } from '../api/artwork'
 import { useAuthStore } from '../stores/useAuthStore'
 import { Palette, FlipHorizontal2 } from 'lucide-react'
 

@@ -16,14 +16,3 @@ export const consumeToken = (): Promise<{ tokenBalance: number }> =>
 
 export const startSession = (nickname: string): Promise<{ id: string; topic: string }> =>
   client.post<{ id: string; topic: string }>('/canvas/start', { nickname }).then(res => res.data)
-
-export const completeCanvas = (sessionId: string, canvasBase64: string): Promise<{ guess: string }> =>
-  client.post<{ guess: string }>(`/canvas/${sessionId}/complete`, { canvasBase64 }).then(res => res.data)
-
-export const saveToGallery = (data: {
-  aiImageUrl: string
-  style: string
-  story: string
-  subject?: string
-  type: 'CANVAS' | 'DECALCOMANIA'
-}) => client.post('/gallery/save', data)

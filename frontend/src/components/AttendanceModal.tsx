@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTodayAttendance, checkInAttendance, getAttendanceHistory, getClaimedBonuses, claimStreakBonus } from '../api/user';
+import { getTodayAttendance, checkInAttendance, getAttendanceHistory, getClaimedBonuses, claimStreakBonus } from '../api/attendance';
 import ChickStamp from './ChickStamp';
 import { useAuthStore } from '../stores/useAuthStore';
 import { X, Zap, Ticket, CheckCircle, Star, Sparkles } from 'lucide-react';
