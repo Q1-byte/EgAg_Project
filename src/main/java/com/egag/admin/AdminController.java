@@ -223,7 +223,6 @@ public class AdminController {
     @GetMapping("/artwork-all-list")
     public ResponseEntity<Page<AdminArtworkResponse>> getAdminArtworks(
             @PageableDefault(size = 20) Pageable pageable) {
-        System.out.println(">>> [DEBUG] AdminController.getAdminArtworks hit! Page: " + pageable.getPageNumber());
         return ResponseEntity.ok(adminService.getAdminArtworks(pageable));
     }
 }
